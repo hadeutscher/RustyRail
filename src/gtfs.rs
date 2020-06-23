@@ -66,8 +66,11 @@ impl fmt::Display for Station {
 }
 
 impl Station {
-    pub fn new(id: StationId, name: String) -> Self {
-        Self { id, name }
+    pub fn new(id: StationId, name: &str) -> Self {
+        Self {
+            id,
+            name: name.to_owned(),
+        }
     }
 
     pub fn id(&self) -> StationId {
@@ -156,15 +159,18 @@ impl Hash for Train {
 }
 
 impl Train {
-    pub fn new(id: TrainId) -> Self {
+    pub fn new(id: &str) -> Self {
         Self {
-            id,
+            id: id.to_owned(),
             stops: Vec::new(),
         }
     }
 
-    pub fn from_stops(id: TrainId, stops: Vec<Stop>) -> Self {
-        Self { id, stops }
+    pub fn from_stops(id: &str, stops: Vec<Stop>) -> Self {
+        Self {
+            id: id.to_owned(),
+            stops,
+        }
     }
 
     pub fn id(&self) -> &TrainId {
@@ -286,7 +292,7 @@ impl RailroadData {
                 .get(stop_name)
                 .ok_or_else(|| make_error("stop_name"))?;
             self.stations
-                .insert(stop_id, Station::new(stop_id, stop_name.to_owned()));
+                .insert(stop_id, Station::new(stop_id, stop_name));
         }
         Ok(())
     }
