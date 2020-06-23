@@ -65,6 +65,22 @@ fn shortest_path() {
     assert_eq!("3", trains[1].train().id());
     assert_eq!(400, trains[1].start().station());
     assert_eq!(300, trains[1].end().station());
+
+    let route = harail::get_latest_good_single_route(
+        &data,
+        time(10, 00, 00),
+        data.station(100),
+        data.station(300),
+    )
+    .unwrap();
+    let trains: Vec<&RoutePart> = route.parts().collect();
+    assert_eq!(2, trains.len());
+    assert_eq!("2", trains[0].train().id());
+    assert_eq!(100, trains[0].start().station());
+    assert_eq!(400, trains[0].end().station());
+    assert_eq!("3", trains[1].train().id());
+    assert_eq!(400, trains[1].start().station());
+    assert_eq!(300, trains[1].end().station());
 }
 
 #[test]
@@ -99,6 +115,19 @@ fn minimize_switches() {
     ));
     let data = RailroadData::from_stations_trains(stations(), trains);
     let route = harail::get_best_single_route(
+        &data,
+        time(10, 00, 00),
+        data.station(100),
+        data.station(600),
+    )
+    .unwrap();
+    let trains: Vec<&RoutePart> = route.parts().collect();
+    assert_eq!(1, trains.len());
+    assert_eq!("1", trains[0].train().id());
+    assert_eq!(100, trains[0].start().station());
+    assert_eq!(600, trains[0].end().station());
+
+    let route = harail::get_latest_good_single_route(
         &data,
         time(10, 00, 00),
         data.station(100),
@@ -145,7 +174,19 @@ fn minimize_switches2() {
     assert_eq!("1", trains[0].train().id());
     assert_eq!(100, trains[0].start().station());
     assert_eq!(400, trains[0].end().station());
-}
+
+    let route = harail::get_latest_good_single_route(
+        &data,
+        time(10, 00, 00),
+        data.station(100),
+        data.station(400),
+    )
+    .unwrap();
+    let trains: Vec<&RoutePart> = route.parts().collect();
+    assert_eq!(1, trains.len());
+    assert_eq!("1", trains[0].train().id());
+    assert_eq!(100, trains[0].start().station());
+    assert_eq!(400, trains[0].end().station());}
 
 #[test]
 fn wait_on_train() {
@@ -181,7 +222,21 @@ fn wait_on_train() {
     assert_eq!(100, trains[0].start().station());
     assert_eq!(300, trains[0].end().station());
 
-    // TODO: Add rest of test after alt-route finding is implemented
+    let route = harail::get_latest_good_single_route(
+        &data,
+        time(10, 00, 00),
+        data.station(100),
+        data.station(300),
+    )
+    .unwrap();
+    let trains: Vec<&RoutePart> = route.parts().collect();
+    assert_eq!(2, trains.len());
+    assert_eq!("2", trains[0].train().id());
+    assert_eq!(100, trains[0].start().station());
+    assert_eq!(200, trains[0].end().station());
+    assert_eq!("1", trains[1].train().id());
+    assert_eq!(200, trains[1].start().station());
+    assert_eq!(300, trains[1].end().station());
 }
 
 
@@ -213,6 +268,19 @@ fn wait_on_train_alt_route() {
         ],
     ));
     let data = RailroadData::from_stations_trains(stations(), trains);
-    
-    // TODO: Add rest of test after alt-route finding is implemented
+    let route = harail::get_latest_good_single_route(
+        &data,
+        time(10, 00, 00),
+        data.station(100),
+        data.station(300),
+    )
+    .unwrap();
+    let trains: Vec<&RoutePart> = route.parts().collect();
+    assert_eq!(2, trains.len());
+    assert_eq!("2", trains[0].train().id());
+    assert_eq!(100, trains[0].start().station());
+    assert_eq!(200, trains[0].end().station());
+    assert_eq!("3", trains[1].train().id());
+    assert_eq!(200, trains[1].start().station());
+    assert_eq!(300, trains[1].end().station());
 }
