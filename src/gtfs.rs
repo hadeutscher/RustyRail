@@ -61,13 +61,16 @@ impl Hash for Station {
 
 impl fmt::Display for Station {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.id(), self.name())
+        write!(f, "{}: {}", self.id, self.name)
     }
 }
 
 impl Station {
-    pub fn new(id: StationId, name: String) -> Self {
-        Self { id: id, name: name }
+    pub fn new(id: StationId, name: &str) -> Self {
+        Self {
+            id,
+            name: name.to_owned(),
+        }
     }
 
     pub fn id(&self) -> StationId {
@@ -86,12 +89,26 @@ pub struct Stop {
     departure: NaiveDateTime,
 }
 
+impl fmt::Display for Stop {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.arrival == self.departure {
+            write!(f, "{}: {}", self.station, self.arrival)
+        } else {
+            write!(f, "{}: {}-{}", self.station, self.arrival, self.departure)
+        }
+    }
+}
+
 impl Stop {
-    pub fn new(station: StationId, arrival: NaiveDateTime, departure: NaiveDateTime) -> Self {
+    pub fn new(
+        station: StationId,
+        arrival: NaiveDateTime,
+        departure: Option<NaiveDateTime>,
+    ) -> Self {
         Self {
             station,
             arrival,
-            departure,
+            departure: departure.unwrap_or(arrival),
         }
     }
 
@@ -118,6 +135,15 @@ pub struct Train {
     stops: Vec<Stop>,
 }
 
+impl fmt::Display for Train {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for stop in &self.stops {
+            writeln!(f, "{}", stop)?;
+        }
+        Ok(())
+    }
+}
+
 impl PartialEq for Train {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
@@ -133,10 +159,17 @@ impl Hash for Train {
 }
 
 impl Train {
-    pub fn new(id: TrainId) -> Self {
+    pub fn new(id: &str) -> Self {
         Self {
-            id: id,
+            id: id.to_owned(),
             stops: Vec::new(),
+        }
+    }
+
+    pub fn from_stops(id: &str, stops: Vec<Stop>) -> Self {
+        Self {
+            id: id.to_owned(),
+            stops,
         }
     }
 
@@ -155,6 +188,24 @@ pub struct RailroadData {
 }
 
 impl RailroadData {
+    pub fn new() -> Self {
+        RailroadData {
+            stations: HashMap::new(),
+            trains: HashMap::new(),
+        }
+    }
+
+    pub fn from_stations_trains(stations: Vec<Station>, trains: Vec<Train>) -> Self {
+        let mut result = Self::new();
+        stations.into_iter().for_each(|x| {
+            result.stations.insert(x.id, x);
+        });
+        trains.into_iter().for_each(|x| {
+            result.trains.insert(x.id.to_owned(), x);
+        });
+        result
+    }
+
     pub fn station(&self, id: StationId) -> &Station {
         &self.stations[&id]
     }
@@ -241,7 +292,7 @@ impl RailroadData {
                 .get(stop_name)
                 .ok_or_else(|| make_error("stop_name"))?;
             self.stations
-                .insert(stop_id, Station::new(stop_id, stop_name.to_owned()));
+                .insert(stop_id, Station::new(stop_id, stop_name));
         }
         Ok(())
     }
@@ -411,7 +462,7 @@ impl RailroadData {
                 return Err(make_error("stop_sequence == 0"));
             }
             let stop_seq_index = stop_sequence as usize - 1;
-            let stop = Stop::new(stop_id, arrival_datetime, departure_datetime);
+            let stop = Stop::new(stop_id, arrival_datetime, Some(departure_datetime));
             if !proto_trains.contains_key(trip_id) {
                 proto_trains.insert(
                     trip_id.to_owned(),
@@ -451,10 +502,7 @@ impl RailroadData {
     ) -> Result<Self, Box<dyn Error>> {
         let irw_id = Self::parse_agency(root)?;
         let irw_routes = Self::parse_routes(root, irw_id)?;
-        let mut result = Self {
-            stations: HashMap::new(),
-            trains: HashMap::new(),
-        };
+        let mut result = Self::new();
         let mut date = period.0.date();
         let end_date = period.1.date();
         let mut stations = HashSet::new();

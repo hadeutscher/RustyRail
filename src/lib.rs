@@ -279,3 +279,38 @@ pub fn get_best_single_route<'a>(
     let route = build_route(path);
     Some(route)
 }
+
+pub fn get_latest_good_single_route<'a>(
+    data: &'a RailroadData,
+    start_time: NaiveDateTime,
+    start_station: &'a Station,
+    end_station: &'a Station,
+) -> Option<Route<'a>> {
+    let mut g = RailroadGraph::from_data(data);
+    let origin = Singularity {
+        station: start_station,
+        time: start_time,
+        train: None,
+    };
+    g.ensure(origin);
+    let path = g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none())?;
+    let mut route = build_route(path);
+    let best_arrival = match route.parts().last() {
+        Some(x) => x.end.arrival(),
+        None => return Some(route),
+    };
+    while route.parts().last().unwrap().end.arrival() == best_arrival {
+        let origin = Singularity {
+            station: start_station,
+            time: route.parts().next().unwrap().start.departure() + Duration::seconds(1),
+            train: None
+        };
+        g.ensure(origin);
+        let path_opt = g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none());
+        route = match path_opt {
+            Some(p) => build_route(p),
+            None => break
+        };
+    }
+    Some(route)
+}
