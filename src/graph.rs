@@ -128,7 +128,11 @@ impl<N: Eq + Hash + Copy, E: Eq + Hash + Copy + Weight> Graph<N, E> {
         result
     }
 
-    pub fn find_shortest_path<T: Fn(&N) -> bool>(&mut self, origin: &N, predicate: T) -> Option<Vec<(E, N)>> {
+    pub fn find_shortest_path<T: Fn(&N) -> bool>(
+        &mut self,
+        origin: &N,
+        predicate: T,
+    ) -> Option<Vec<(E, N)>> {
         self.dijkstra_init(origin);
         let found = self.dijkstra_core(origin, predicate)?;
         Some(self.dijkstra_backtrace(origin, &found))

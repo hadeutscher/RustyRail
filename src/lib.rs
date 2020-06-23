@@ -303,13 +303,14 @@ pub fn get_latest_good_single_route<'a>(
         let origin = Singularity {
             station: start_station,
             time: route.parts().next().unwrap().start.departure() + Duration::seconds(1),
-            train: None
+            train: None,
         };
         g.ensure(origin);
-        let path_opt = g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none());
+        let path_opt =
+            g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none());
         route = match path_opt {
             Some(p) => build_route(p),
-            None => break
+            None => break,
         };
     }
     Some(route)

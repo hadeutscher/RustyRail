@@ -186,7 +186,8 @@ fn minimize_switches2() {
     assert_eq!(1, trains.len());
     assert_eq!("1", trains[0].train().id());
     assert_eq!(100, trains[0].start().station());
-    assert_eq!(400, trains[0].end().station());}
+    assert_eq!(400, trains[0].end().station());
+}
 
 #[test]
 fn wait_on_train() {
@@ -238,7 +239,6 @@ fn wait_on_train() {
     assert_eq!(200, trains[1].start().station());
     assert_eq!(300, trains[1].end().station());
 }
-
 
 #[test]
 fn wait_on_train_alt_route() {
