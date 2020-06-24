@@ -169,7 +169,9 @@ impl<'a> RailroadGraph<'a> {
 pub struct RoutePart<'a> {
     train: &'a Train,
     start: &'a Stop,
+    start_station: Option<&'a Station>,
     end: &'a Stop,
+    end_station: Option<&'a Station>,
 }
 
 impl<'a> RoutePart<'a> {
@@ -178,7 +180,9 @@ impl<'a> RoutePart<'a> {
         RoutePart {
             train: train,
             start: start,
+            start_station: None,
             end: end,
+            end_station: None,
         }
     }
 
@@ -203,9 +207,17 @@ impl<'a> fmt::Display for RoutePart<'a> {
         write!(
             f,
             "{} ({}) -> {} ({})",
-            self.start.station(),
+            if let Some(s) = self.start_station {
+                s.name().to_owned()
+            } else {
+                self.start.station().to_string()
+            },
             self.start.departure(),
-            self.end.station(),
+            if let Some(s) = self.end_station {
+                s.name().to_owned()
+            } else {
+                self.start.station().to_string()
+            },
             self.end.arrival()
         )
     }
@@ -269,6 +281,13 @@ fn build_route<'a>(path: Vec<(Action<'a>, Singularity)>) -> Route<'a> {
     route
 }
 
+fn translate_route<'a>(data: &'a RailroadData, route: &mut Route<'a>) {
+    for part in &mut route.parts {
+        part.start_station = Some(data.station(part.start.station()));
+        part.end_station = Some(data.station(part.end.station()));
+    }
+}
+
 /// Finds the single best route from the source to the destination station at the given time.
 ///
 /// This obtains the route with the fastest arrival time, relative to the given time.
@@ -287,7 +306,8 @@ pub fn get_best_single_route<'a>(
     };
     g.ensure(origin);
     let path = g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none())?;
-    let route = build_route(path);
+    let mut route = build_route(path);
+    translate_route(&data, &mut route);
     Some(route)
 }
 
@@ -329,5 +349,46 @@ pub fn get_latest_good_single_route<'a>(
             None => break,
         };
     }
+    translate_route(&data, &mut route);
     Some(route)
+}
+
+/// Finds all good routes to the destination
+///
+/// This obtains all routes that have no better routes for the same arrival time.
+/// The route search is started from start_time.
+pub fn get_multiple_routes<'a>(
+    data: &'a RailroadData,
+    start_time: NaiveDateTime,
+    start_station: &'a Station,
+    end_station: &'a Station,
+) -> Vec<Route<'a>> {
+    let mut g = RailroadGraph::from_data(data);
+    let mut result = Vec::new();
+
+    let origin = Singularity {
+        station: start_station,
+        time: start_time,
+        train: None,
+    };
+    g.ensure(origin);
+    let mut path_opt =
+        g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none());
+    while let Some(path) = path_opt {
+        let mut route = build_route(path);
+        translate_route(&data, &mut route);
+        if route.parts.len() == 0 {
+            result.push(route);
+            break;
+        }
+        let origin = Singularity {
+            station: start_station,
+            time: route.parts().next().unwrap().start.departure() + Duration::seconds(1),
+            train: None,
+        };
+        result.push(route);
+        g.ensure(origin);
+        path_opt = g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none());
+    }
+    result
 }

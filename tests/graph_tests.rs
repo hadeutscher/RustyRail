@@ -284,3 +284,83 @@ fn wait_on_train_alt_route() {
     assert_eq!(200, trains[1].start().station());
     assert_eq!(300, trains[1].end().station());
 }
+
+#[test]
+fn multiple_routes() {
+    let mut trains = Vec::new();
+    trains.push(Train::from_stops(
+        "1",
+        vec![
+            Stop::new(100, time(10, 00, 00), None),
+            Stop::new(200, time(10, 30, 00), None),
+            Stop::new(300, time(11, 00, 00), None),
+        ],
+    ));
+    trains.push(Train::from_stops(
+        "2",
+        vec![
+            Stop::new(100, time(10, 30, 00), None),
+            Stop::new(200, time(11, 00, 00), None),
+            Stop::new(300, time(11, 30, 00), None),
+        ],
+    ));
+    let data = RailroadData::from_stations_trains(stations(), trains);
+    let routes = harail::get_multiple_routes(
+        &data,
+        time(10, 00, 00),
+        data.station(100),
+        data.station(300),
+    );
+    assert_eq!(2, routes.len());
+    let trains: Vec<&RoutePart> = routes[0].parts().collect();
+    assert_eq!(1, trains.len());
+    assert_eq!("1", trains[0].train().id());
+    assert_eq!(100, trains[0].start().station());
+    assert_eq!(300, trains[0].end().station());
+    let trains: Vec<&RoutePart> = routes[1].parts().collect();
+    assert_eq!(1, trains.len());
+    assert_eq!("2", trains[0].train().id());
+    assert_eq!(100, trains[0].start().station());
+    assert_eq!(300, trains[0].end().station());
+}
+
+#[test]
+fn wait_on_train_multiple_routes() {
+    let mut trains = Vec::new();
+    trains.push(Train::from_stops(
+        "1",
+        vec![
+            Stop::new(100, time(10, 00, 00), None),
+            Stop::new(200, time(10, 20, 00), Some(time(10, 30, 00))),
+            Stop::new(300, time(11, 00, 00), None),
+        ],
+    ));
+    trains.push(Train::from_stops(
+        "2",
+        vec![
+            Stop::new(100, time(10, 10, 00), None),
+            Stop::new(200, time(10, 20, 00), None),
+        ],
+    ));
+    let data = RailroadData::from_stations_trains(stations(), trains);
+    let routes = harail::get_multiple_routes(
+        &data,
+        time(10, 00, 00),
+        data.station(100),
+        data.station(300),
+    );
+    assert_eq!(2, routes.len());
+    let trains: Vec<&RoutePart> = routes[0].parts().collect();
+    assert_eq!(1, trains.len());
+    assert_eq!("1", trains[0].train().id());
+    assert_eq!(100, trains[0].start().station());
+    assert_eq!(300, trains[0].end().station());
+    let trains: Vec<&RoutePart> = routes[1].parts().collect();
+    assert_eq!(2, trains.len());
+    assert_eq!("2", trains[0].train().id());
+    assert_eq!(100, trains[0].start().station());
+    assert_eq!(200, trains[0].end().station());
+    assert_eq!("1", trains[1].train().id());
+    assert_eq!(200, trains[1].start().station());
+    assert_eq!(300, trains[1].end().station());
+}
