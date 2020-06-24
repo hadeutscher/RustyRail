@@ -10,10 +10,13 @@ use std::error::Error;
 use std::fmt;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
+use std::io::ErrorKind;
 use std::path::Path;
 use std::result::Result;
 
-use super::errors::make_error;
+fn make_error(m: &str) -> Box<dyn Error> {
+    Box::new(std::io::Error::new(ErrorKind::InvalidInput, m))
+}
 
 /// A unique identifier type for trains in the database
 pub type TrainId = String;
