@@ -166,6 +166,7 @@ impl<'a> RailroadGraph<'a> {
     }
 }
 
+/// Holds information regarding a single train ride
 pub struct RoutePart<'a> {
     train: &'a Train,
     start: &'a Stop,
@@ -173,6 +174,7 @@ pub struct RoutePart<'a> {
 }
 
 impl<'a> RoutePart<'a> {
+    /// Create a new RoutePart object
     pub fn new(train: &'a Train, start: &'a Stop, end: &'a Stop) -> Self {
         RoutePart {
             train: train,
@@ -181,14 +183,17 @@ impl<'a> RoutePart<'a> {
         }
     }
 
+    /// The train associated with the RoutePart object
     pub fn train(&self) -> &Train {
         self.train
     }
 
+    /// The stop at which the train is boarded
     pub fn start(&self) -> &Stop {
         self.start
     }
 
+    /// The stop at which the train is unboarded
     pub fn end(&self) -> &Stop {
         self.end
     }
@@ -207,15 +212,18 @@ impl<'a> fmt::Display for RoutePart<'a> {
     }
 }
 
+/// Holds details of a route between stations
 pub struct Route<'a> {
     parts: Vec<RoutePart<'a>>,
 }
 
 impl<'a> Route<'a> {
+    /// Create a new Route object
     pub fn new() -> Self {
         Route { parts: Vec::new() }
     }
 
+    /// Iterate over the parts of the route. Each RoutePart corresponds to a single train ride.
     pub fn parts(&self) -> impl Iterator<Item = &RoutePart> {
         self.parts.iter()
     }
@@ -262,6 +270,10 @@ fn build_route<'a>(path: Vec<(Action<'a>, Singularity)>) -> Route<'a> {
     route
 }
 
+/// Finds the single best route from the source to the destination station at the given time.
+///
+/// This obtains the route with the fastest arrival time, relative to the given time.
+/// If more than one route is present, routes are prioritized according to least train switches, and least stations passed through in general.
 pub fn get_best_single_route<'a>(
     data: &'a RailroadData,
     start_time: NaiveDateTime,
@@ -280,6 +292,11 @@ pub fn get_best_single_route<'a>(
     Some(route)
 }
 
+/// Finds a route that arrives no later than the best route, but leaves as late as possible.
+///
+/// This obtains the route with the fastest arrival time, relative to the given time.
+/// If more than one route is present, routes are prioritized according to latest departure time.
+/// If still more than one route is present, routes are subsequently prioritized by least train switches, and least stations passed through in general.
 pub fn get_latest_good_single_route<'a>(
     data: &'a RailroadData,
     start_time: NaiveDateTime,

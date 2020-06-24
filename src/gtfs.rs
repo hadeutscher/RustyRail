@@ -15,7 +15,10 @@ use std::result::Result;
 
 use super::errors::make_error;
 
+/// A unique identifier type for trains in the database
 pub type TrainId = String;
+
+/// A unique identifier type for stations in the database
 pub type StationId = u64;
 
 macro_rules! headers {
@@ -40,6 +43,7 @@ macro_rules! headers {
     }}
 }
 
+/// Represents a database train station entry
 pub struct Station {
     id: StationId,
     name: String,
@@ -66,6 +70,7 @@ impl fmt::Display for Station {
 }
 
 impl Station {
+    /// Create a new Station object
     pub fn new(id: StationId, name: &str) -> Self {
         Self {
             id,
@@ -73,15 +78,18 @@ impl Station {
         }
     }
 
+    /// Gets the station identifier
     pub fn id(&self) -> StationId {
         self.id
     }
 
+    /// Gets the station name
     pub fn name(&self) -> &String {
         &self.name
     }
 }
 
+/// Represents a train stopping at a certain station
 #[derive(PartialEq, Eq, Hash)]
 pub struct Stop {
     station: StationId,
@@ -100,6 +108,7 @@ impl fmt::Display for Stop {
 }
 
 impl Stop {
+    /// Create a new Stop object
     pub fn new(
         station: StationId,
         arrival: NaiveDateTime,
@@ -112,14 +121,19 @@ impl Stop {
         }
     }
 
+    /// The station at which the train stopped
     pub fn station(&self) -> StationId {
         self.station
     }
 
+    /// The time the train has arrived at the station
     pub fn arrival(&self) -> NaiveDateTime {
         self.arrival
     }
 
+    /// The time the train has departed from the station.
+    ///
+    /// This is usually the same as arrival time, unless the train waits at the station.
     pub fn departure(&self) -> NaiveDateTime {
         self.departure
     }
@@ -130,6 +144,11 @@ struct PrototypeTrain {
     stops: Vec<Option<Stop>>,
 }
 
+/// Represents a single train
+///
+/// Note that this objects represents not the train but rather the act of the train moving from its initial station to its end station, possibly passing through other stations.
+/// For example, one physical train might be responsible for handling a line repetitively, traveling forward and backwards over it many times a day.
+/// Each such pass over this route from start to end (or vice versa) is represented by a Train object.
 pub struct Train {
     id: TrainId,
     stops: Vec<Stop>,
@@ -159,6 +178,7 @@ impl Hash for Train {
 }
 
 impl Train {
+    /// Create a new Train object
     pub fn new(id: &str) -> Self {
         Self {
             id: id.to_owned(),
@@ -166,6 +186,7 @@ impl Train {
         }
     }
 
+    /// Create a train object with certain stops
     pub fn from_stops(id: &str, stops: Vec<Stop>) -> Self {
         Self {
             id: id.to_owned(),
@@ -173,21 +194,25 @@ impl Train {
         }
     }
 
+    /// Get the train identifier
     pub fn id(&self) -> &TrainId {
         &self.id
     }
 
+    /// Iterate over the train stops
     pub fn stops(&self) -> impl Iterator<Item = &Stop> {
         self.stops.iter()
     }
 }
 
+/// A database of all available trains and stations
 pub struct RailroadData {
     stations: HashMap<StationId, Station>,
     trains: HashMap<TrainId, Train>,
 }
 
 impl RailroadData {
+    /// Create a new RailroadData object
     pub fn new() -> Self {
         RailroadData {
             stations: HashMap::new(),
@@ -195,6 +220,7 @@ impl RailroadData {
         }
     }
 
+    /// Create a new RailroadData object with some stations and trains
     pub fn from_stations_trains(stations: Vec<Station>, trains: Vec<Train>) -> Self {
         let mut result = Self::new();
         stations.into_iter().for_each(|x| {
@@ -206,22 +232,48 @@ impl RailroadData {
         result
     }
 
+    /// Get the station with the given identifier.
+    ///
+    /// The function panics if the identifier doesn't exist. For example:
+    /// ```should_panic
+    /// let data = harail::gtfs::RailroadData::new();
+    /// let station = data.station(123);
+    /// ```
     pub fn station(&self, id: StationId) -> &Station {
         &self.stations[&id]
     }
 
-    pub fn train(&self, id: &TrainId) -> &Train {
+    /// Get the train with the given identifier.
+    ///
+    /// The function panics if the identifier doesn't exist. For example:
+    /// ```should_panic
+    /// let data = harail::gtfs::RailroadData::new();
+    /// let train = data.train("123");
+    /// ```
+    pub fn train(&self, id: &str) -> &Train {
         &self.trains[id]
     }
 
+    /// Iterates over the stations in the database
     pub fn stations(&self) -> impl Iterator<Item = &Station> {
         self.stations.values()
     }
 
+    /// Iterates over the trains in the database
     pub fn trains(&self) -> impl Iterator<Item = &Train> {
         self.trains.values()
     }
 
+    /// Finds a station with the given name.
+    ///
+    /// Examples:
+    /// ```
+    /// use harail::gtfs::{RailroadData, Station};
+    ///
+    /// let data = RailroadData::from_stations_trains(vec![Station::new(100, "test")], vec![]);
+    /// let station = data.find_station("test").unwrap();
+    /// assert_eq!(100, station.id());
+    /// ```
     pub fn find_station(&self, name: &str) -> Option<&Station> {
         for station in self.stations.values() {
             if station.name == name {
@@ -496,6 +548,7 @@ impl RailroadData {
         Ok(())
     }
 
+    /// Loads a GTFS file database.
     pub fn from_gtfs(
         root: &Path,
         period: (NaiveDateTime, NaiveDateTime),
