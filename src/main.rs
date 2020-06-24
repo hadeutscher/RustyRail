@@ -112,18 +112,26 @@ fn main() {
                     .expect("Destination station missing"),
             )
             .expect("Could not find dest station");
-        let route = if matches.is_present("multiple") {
-            panic!("Not implemented yet");
+        let routes = if matches.is_present("multiple") {
+            harail::get_multiple_routes(&data, start_time, start_station, end_station)
         } else if matches.is_present("delayed") {
-            harail::get_latest_good_single_route(&data, start_time, start_station, end_station)
+            vec![harail::get_latest_good_single_route(
+                &data,
+                start_time,
+                start_station,
+                end_station,
+            )
+            .expect("Could not find best route")]
         } else {
-            harail::get_best_single_route(&data, start_time, start_station, end_station)
-        }
-        .expect("Could not find best route");
+            vec![
+                harail::get_best_single_route(&data, start_time, start_station, end_station)
+                    .expect("Could not find best route"),
+            ]
+        };
         if matches.is_present("json") {
             panic!("Not implemented yet");
         } else {
-            print!("{}", route);
+            routes.into_iter().for_each(|r| println!("{}", r));
         }
     }
 }
