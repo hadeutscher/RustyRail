@@ -4,7 +4,9 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use super::JSON;
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
+use json::JsonValue;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt;
@@ -69,6 +71,15 @@ impl Hash for Station {
 impl fmt::Display for Station {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}", self.id, self.name)
+    }
+}
+
+impl JSON for Station {
+    fn to_json(&self) -> JsonValue {
+        object! {
+            id: self.id,
+            name: self.name.to_owned()
+        }
     }
 }
 

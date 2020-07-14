@@ -4,8 +4,13 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#[macro_use(object)]
+extern crate json;
+
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use clap::{App, Arg, SubCommand};
+use harail::JSON;
+use json::JsonValue;
 use std::path::Path;
 
 fn main() {
@@ -92,7 +97,11 @@ fn main() {
         let mut stations: Vec<_> = data.stations().collect();
         stations.sort_by_key(|s| s.id());
         if matches.is_present("json") {
-            panic!("Not implemented yet");
+            let mut json_stations = JsonValue::new_array();
+            for station in stations {
+                json_stations.push(station.to_json()).unwrap()
+            }
+            println!("{}", object! {stations: json_stations }.dump());
         } else {
             stations.into_iter().for_each(|s| println!("{}", s));
         }
@@ -129,7 +138,11 @@ fn main() {
             ]
         };
         if matches.is_present("json") {
-            panic!("Not implemented yet");
+            let mut json_routes = JsonValue::new_array();
+            for route in routes {
+                json_routes.push(route.to_json()).unwrap()
+            }
+            println!("{}", object! {routes: json_routes }.dump());
         } else {
             routes.into_iter().for_each(|r| println!("{}", r));
         }
