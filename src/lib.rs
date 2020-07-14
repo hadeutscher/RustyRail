@@ -7,11 +7,19 @@
 mod graph;
 pub mod gtfs;
 
-use chrono::{Duration, NaiveDateTime};
+#[macro_use(object)]
+extern crate json;
+
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+use json::JsonValue;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 use gtfs::{RailroadData, Station, Stop, Train};
+
+pub trait JSON {
+    fn to_json(&self) -> JsonValue;
+}
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]
 struct Singularity<'a> {
@@ -223,6 +231,20 @@ impl<'a> fmt::Display for RoutePart<'a> {
     }
 }
 
+impl<'a> JSON for RoutePart<'a> {
+    fn to_json(&self) -> JsonValue {
+        let departure = DateTime::<Utc>::from_utc(self.start.departure(), Utc);
+        let arrival = DateTime::<Utc>::from_utc(self.end.arrival(), Utc);
+        object! {
+            train: self.train.id().to_owned(),
+            start_time: departure.to_rfc3339(),
+            start_station: self.start.station(),
+            end_time: arrival.to_rfc3339(),
+            end_station: self.end.station()
+        }
+    }
+}
+
 /// Holds details of a route between stations
 pub struct Route<'a> {
     parts: Vec<RoutePart<'a>>,
@@ -232,6 +254,11 @@ impl<'a> Route<'a> {
     /// Create a new Route object
     pub fn new() -> Self {
         Route { parts: Vec::new() }
+    }
+
+    /// Create a enw Route object from parts
+    pub fn from_parts(parts: Vec<RoutePart<'a>>) -> Self {
+        Route { parts }
     }
 
     /// Iterate over the parts of the route. Each RoutePart corresponds to a single train ride.
@@ -246,6 +273,18 @@ impl<'a> fmt::Display for Route<'a> {
             writeln!(f, "{}", part)?;
         }
         Ok(())
+    }
+}
+
+impl<'a> JSON for Route<'a> {
+    fn to_json(&self) -> JsonValue {
+        let mut result = JsonValue::new_array();
+        for part in &self.parts {
+            result.push(part.to_json()).unwrap();
+        }
+        object! {
+            parts: result
+        }
     }
 }
 

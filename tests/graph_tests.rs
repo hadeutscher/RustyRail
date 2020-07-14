@@ -1,26 +1,13 @@
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+/* Copyright (C) 2020 Yuval Deutscher
 
-extern crate harail;
-use harail::gtfs::{RailroadData, Station, Stop, Train};
+* This Source Code Form is subject to the terms of the Mozilla Public
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+mod test_data;
+use harail::gtfs::{RailroadData, Stop, Train};
 use harail::RoutePart;
-
-fn stations() -> Vec<Station> {
-    vec![
-        Station::new(100, "stat_a"),
-        Station::new(200, "stat_b"),
-        Station::new(300, "stat_c"),
-        Station::new(400, "stat_d"),
-        Station::new(500, "stat_e"),
-        Station::new(600, "stat_f"),
-    ]
-}
-
-fn time(h: u32, m: u32, s: u32) -> NaiveDateTime {
-    NaiveDateTime::new(
-        NaiveDate::from_ymd(2000, 01, 01),
-        NaiveTime::from_hms(h, m, s),
-    )
-}
+use test_data::time;
 
 #[test]
 fn shortest_path() {
@@ -49,7 +36,7 @@ fn shortest_path() {
             Stop::new(300, time(10, 40, 00), None),
         ],
     ));
-    let data = RailroadData::from_stations_trains(stations(), trains);
+    let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_best_single_route(
         &data,
         time(10, 00, 00),
@@ -113,7 +100,7 @@ fn minimize_switches() {
             Stop::new(600, time(12, 30, 00), None),
         ],
     ));
-    let data = RailroadData::from_stations_trains(stations(), trains);
+    let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_best_single_route(
         &data,
         time(10, 00, 00),
@@ -161,7 +148,7 @@ fn minimize_switches2() {
             Stop::new(300, time(10, 30, 00), None),
         ],
     ));
-    let data = RailroadData::from_stations_trains(stations(), trains);
+    let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_best_single_route(
         &data,
         time(10, 00, 00),
@@ -209,7 +196,7 @@ fn wait_on_train() {
             Stop::new(200, time(10, 20, 00), None),
         ],
     ));
-    let data = RailroadData::from_stations_trains(stations(), trains);
+    let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_best_single_route(
         &data,
         time(10, 00, 00),
@@ -267,7 +254,7 @@ fn wait_on_train_alt_route() {
             Stop::new(300, time(10, 40, 00), None),
         ],
     ));
-    let data = RailroadData::from_stations_trains(stations(), trains);
+    let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_latest_good_single_route(
         &data,
         time(10, 00, 00),
@@ -304,7 +291,7 @@ fn multiple_routes() {
             Stop::new(300, time(11, 30, 00), None),
         ],
     ));
-    let data = RailroadData::from_stations_trains(stations(), trains);
+    let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let routes = harail::get_multiple_routes(
         &data,
         time(10, 00, 00),
@@ -342,7 +329,7 @@ fn wait_on_train_multiple_routes() {
             Stop::new(200, time(10, 20, 00), None),
         ],
     ));
-    let data = RailroadData::from_stations_trains(stations(), trains);
+    let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let routes = harail::get_multiple_routes(
         &data,
         time(10, 00, 00),
