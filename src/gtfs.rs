@@ -7,6 +7,7 @@
 use super::JSON;
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
 use json::JsonValue;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt;
@@ -49,6 +50,7 @@ macro_rules! headers {
 }
 
 /// Represents a database train station entry
+#[derive(Serialize, Deserialize)]
 pub struct Station {
     id: StationId,
     name: String,
@@ -104,7 +106,7 @@ impl Station {
 }
 
 /// Represents a train stopping at a certain station
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Stop {
     station: StationId,
     arrival: NaiveDateTime,
@@ -163,6 +165,7 @@ struct PrototypeTrain {
 /// Note that this objects represents not the train but rather the act of the train moving from its initial station to its end station, possibly passing through other stations.
 /// For example, one physical train might be responsible for handling a line repetitively, traveling forward and backwards over it many times a day.
 /// Each such pass over this route from start to end (or vice versa) is represented by a Train object.
+#[derive(Serialize, Deserialize)]
 pub struct Train {
     id: TrainId,
     stops: Vec<Stop>,
@@ -220,6 +223,7 @@ impl Train {
 }
 
 /// A database of all available trains and stations
+#[derive(Serialize, Deserialize)]
 pub struct RailroadData {
     stations: HashMap<StationId, Station>,
     trains: HashMap<TrainId, Train>,

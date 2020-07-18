@@ -7,11 +7,12 @@
 #[macro_use(object)]
 extern crate json;
 
+use bincode::{deserialize_from, serialize_into};
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use clap::{App, Arg, SubCommand};
-use harail::JSON;
+use harail::{gtfs::RailroadData, JSON};
 use json::JsonValue;
-use std::path::Path;
+use std::{fs::File, path::Path};
 
 fn main() {
     let matches = App::new("HaRail")
@@ -20,7 +21,7 @@ fn main() {
         .about("Because the Israel Railways app sucks™")
         .arg(
             Arg::with_name("DATABASE")
-                .help("The input database to use")
+                .help("The HaRail database to use")
                 .required(true)
                 .index(1),
         )
@@ -75,6 +76,16 @@ fn main() {
                         .help("Show multiple train options"),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("parse-gtfs")
+                .about("Parse a GTFS database")
+                .arg(
+                    Arg::with_name("GTFS_PATH")
+                        .help("The GTFS database to parse")
+                        .index(1)
+                        .required(true),
+                ),
+        )
         .get_matches();
 
     let start_time = NaiveDateTime::new(
@@ -91,8 +102,18 @@ fn main() {
     );
     let end_time = start_time + chrono::Duration::days(1);
     let path = Path::new(matches.value_of("DATABASE").unwrap());
-    let data = harail::gtfs::RailroadData::from_gtfs(path, (start_time, end_time))
-        .expect("Could not load GTFS database");
+
+    if let Some(matches) = matches.subcommand_matches("parse-gtfs") {
+        let gtfs_path = Path::new(matches.value_of("GTFS_PATH").unwrap());
+        let data = harail::gtfs::RailroadData::from_gtfs(gtfs_path, (start_time, end_time))
+            .expect("Could not load GTFS database");
+        let file = File::create(path).expect("Could not open database file for writing");
+        serialize_into(file, &data).expect("Could not serialize database");
+        return;
+    }
+
+    let file = File::open(path).expect("Could not open database file");
+    let data: RailroadData = deserialize_from(file).expect("Could not deserialize database");
     if let Some(_) = matches.subcommand_matches("list-stations") {
         let mut stations: Vec<_> = data.stations().collect();
         stations.sort_by_key(|s| s.id());
@@ -106,20 +127,14 @@ fn main() {
             stations.into_iter().for_each(|s| println!("{}", s));
         }
         return;
-    } else if let Some(matches) = matches.subcommand_matches("find") {
+    }
+
+    if let Some(matches) = matches.subcommand_matches("find") {
         let start_station = data
-            .find_station(
-                matches
-                    .value_of("START_STATION")
-                    .expect("Start station missing"),
-            )
+            .find_station(matches.value_of("START_STATION").unwrap())
             .expect("Could not find source station");
         let end_station = data
-            .find_station(
-                matches
-                    .value_of("DEST_STATION")
-                    .expect("Destination station missing"),
-            )
+            .find_station(matches.value_of("DEST_STATION").unwrap())
             .expect("Could not find dest station");
         let routes = if matches.is_present("multiple") {
             harail::get_multiple_routes(&data, start_time, start_station, end_station)
@@ -146,5 +161,6 @@ fn main() {
         } else {
             routes.into_iter().for_each(|r| println!("{}", r));
         }
+        return;
     }
 }
