@@ -4,7 +4,8 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use super::JSON;
+use crate::HaError;
+use crate::JSON;
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
 use json::JsonValue;
 use serde::{Deserialize, Serialize};
@@ -13,13 +14,8 @@ use std::error::Error;
 use std::fmt;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
-use std::io::ErrorKind;
 use std::path::Path;
 use std::result::Result;
-
-fn make_error(m: &str) -> Box<dyn Error> {
-    Box::new(std::io::Error::new(ErrorKind::InvalidInput, m))
-}
 
 /// A unique identifier type for trains in the database
 pub type TrainId = String;
@@ -42,7 +38,7 @@ macro_rules! headers {
         }
         $(
         if $x.is_none() {
-            return Err(make_error(&format!("{} header not found", stringify!($x))));
+            return Err(Box::new(HaError::GTFSError(format!("{} header not found", stringify!($x)))));
         }
         )+
         ($( $x.unwrap(), )+)
@@ -311,12 +307,12 @@ impl RailroadData {
             if agency_name == "רכבת ישראל" {
                 let agency_id: u64 = record
                     .get(agency_id)
-                    .ok_or_else(|| make_error("agency_id"))?
+                    .ok_or_else(|| HaError::GTFSError("agency_id".to_owned()))?
                     .parse()?;
                 return Ok(agency_id);
             }
         }
-        Err(make_error("not found"))
+        Err(Box::new(HaError::GTFSError("not found".to_owned())))
     }
 
     fn parse_routes(root: &Path, irw_id: u64) -> Result<HashSet<u64>, Box<dyn Error>> {
@@ -329,11 +325,11 @@ impl RailroadData {
             let record = result?;
             let agency_id = record
                 .get(agency_id)
-                .ok_or_else(|| make_error("agency_id"))?;
+                .ok_or_else(|| HaError::GTFSError("agency_id".to_owned()))?;
             if agency_id == irw_id_str {
                 let route_id: u64 = record
                     .get(route_id)
-                    .ok_or_else(|| make_error("route_id"))?
+                    .ok_or_else(|| HaError::GTFSError("route_id".to_owned()))?
                     .parse()?;
                 set.insert(route_id);
             }
@@ -353,14 +349,14 @@ impl RailroadData {
             let record = result?;
             let stop_id: u64 = record
                 .get(stop_id)
-                .ok_or_else(|| make_error("stop_id"))?
+                .ok_or_else(|| HaError::GTFSError("stop_id".to_owned()))?
                 .parse()?;
             if !irw_stops.contains(&stop_id) {
                 continue;
             }
             let stop_name = record
                 .get(stop_name)
-                .ok_or_else(|| make_error("stop_name"))?;
+                .ok_or_else(|| HaError::GTFSError("stop_name".to_owned()))?;
             self.stations
                 .insert(stop_id, Station::new(stop_id, stop_name));
         }
@@ -410,19 +406,19 @@ impl RailroadData {
             let record = result?;
             let service_id: u64 = record
                 .get(service_id)
-                .ok_or_else(|| make_error("service_id"))?
+                .ok_or_else(|| HaError::GTFSError("service_id".to_owned()))?
                 .parse()?;
             let start_date: u64 = record
                 .get(start_date)
-                .ok_or_else(|| make_error("start_date"))?
+                .ok_or_else(|| HaError::GTFSError("start_date".to_owned()))?
                 .parse()?;
             let end_date: u64 = record
                 .get(end_date)
-                .ok_or_else(|| make_error("end_date"))?
+                .ok_or_else(|| HaError::GTFSError("end_date".to_owned()))?
                 .parse()?;
             let day_availability: u64 = record
                 .get(day_header)
-                .ok_or_else(|| make_error("days"))?
+                .ok_or_else(|| HaError::GTFSError("days".to_owned()))?
                 .parse()?;
             /* Note that end date is inclusive */
             if day_availability > 0 && start_date <= date_num && date_num <= end_date {
@@ -446,21 +442,21 @@ impl RailroadData {
             let record = result?;
             let route_id: u64 = record
                 .get(route_id)
-                .ok_or_else(|| make_error("route_id"))?
+                .ok_or_else(|| HaError::GTFSError("route_id".to_owned()))?
                 .parse()?;
             if !irw_routes.contains(&route_id) {
                 continue;
             }
             let service_id: u64 = record
                 .get(service_id)
-                .ok_or_else(|| make_error("service_id"))?
+                .ok_or_else(|| HaError::GTFSError("service_id".to_owned()))?
                 .parse()?;
             if !services.contains(&service_id) {
                 continue;
             }
             let trip_id = record
                 .get(trip_id)
-                .ok_or_else(|| make_error("service_id"))?;
+                .ok_or_else(|| HaError::GTFSError("service_id".to_owned()))?;
             set.insert(trip_id.to_owned());
         }
         Ok(set)
@@ -477,7 +473,11 @@ impl RailroadData {
                 0 => h = part.parse()?,
                 1 => m = part.parse()?,
                 2 => s = part.parse()?,
-                _ => return Err(make_error("Invalid date format")),
+                _ => {
+                    return Err(Box::new(HaError::GTFSError(
+                        "Invalid date format".to_owned(),
+                    )))
+                }
             };
             state += 1;
         }
@@ -508,28 +508,32 @@ impl RailroadData {
         let mut proto_trains = HashMap::new();
         for result in rdr.records() {
             let record = result?;
-            let trip_id = record.get(trip_id).ok_or_else(|| make_error("trip_id"))?;
+            let trip_id = record
+                .get(trip_id)
+                .ok_or_else(|| HaError::GTFSError("trip_id".to_owned()))?;
             if !trips.contains(trip_id) {
                 continue;
             }
             let arrival_time = record
                 .get(arrival_time)
-                .ok_or_else(|| make_error("arrival_time"))?;
+                .ok_or_else(|| HaError::GTFSError("arrival_time".to_owned()))?;
             let arrival_datetime = Self::parse_irw_time(date, arrival_time)?;
             let departure_time = record
                 .get(departure_time)
-                .ok_or_else(|| make_error("departure_time"))?;
+                .ok_or_else(|| HaError::GTFSError("departure_time".to_owned()))?;
             let departure_datetime = Self::parse_irw_time(date, departure_time)?;
             let stop_id: u64 = record
                 .get(stop_id)
-                .ok_or_else(|| make_error("stop_id"))?
+                .ok_or_else(|| HaError::GTFSError("stop_id".to_owned()))?
                 .parse()?;
             let stop_sequence: u64 = record
                 .get(stop_sequence)
-                .ok_or_else(|| make_error("stop_sequence"))?
+                .ok_or_else(|| HaError::GTFSError("stop_sequence".to_owned()))?
                 .parse()?;
             if stop_sequence == 0 {
-                return Err(make_error("stop_sequence == 0"));
+                return Err(Box::new(HaError::GTFSError(
+                    "stop_sequence == 0".to_owned(),
+                )));
             }
             let stop_seq_index = stop_sequence as usize - 1;
             let stop = Stop::new(stop_id, arrival_datetime, Some(departure_datetime));
@@ -555,7 +559,10 @@ impl RailroadData {
         }
         for (id, ptrain) in proto_trains {
             if ptrain.stops.iter().any(|x| x.is_none()) {
-                return Err(make_error(&format!("partial train: {}", id)));
+                return Err(Box::new(HaError::GTFSError(format!(
+                    "partial train: {}",
+                    id
+                ))));
             }
             let train = Train {
                 id: ptrain.id,

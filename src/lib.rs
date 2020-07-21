@@ -16,7 +16,7 @@ use json::JsonValue;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-pub use errors::Error;
+pub use errors::HaError;
 pub use gtfs::{RailroadData, Station, Stop, Train};
 
 pub trait JSON {
