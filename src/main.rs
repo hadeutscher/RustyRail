@@ -10,11 +10,12 @@ extern crate json;
 use bincode::{deserialize_from, serialize_into};
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use clap::{App, Arg, SubCommand};
-use harail::{RailroadData, JSON};
+use harail::{HaError, RailroadData, JSON};
 use json::JsonValue;
+use std::error::Error;
 use std::{fs::File, path::Path};
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let matches = App::new("HaRail")
         .version("0.1")
         .author("Yuval Deutscher")
@@ -90,12 +91,14 @@ fn main() {
 
     let start_time = NaiveDateTime::new(
         if let Some(date) = matches.value_of("date") {
-            NaiveDate::parse_from_str(date, "%d/%m/%Y").expect("Failed to parse date")
+            NaiveDate::parse_from_str(date, "%d/%m/%Y")
+                .map_err(|_| HaError::UsageError("Failed to parse date".to_owned()))?
         } else {
             chrono::Local::now().date().naive_local()
         },
         if let Some(time) = matches.value_of("time") {
-            NaiveTime::parse_from_str(time, "%H:%M:%S").expect("Failed to parse time")
+            NaiveTime::parse_from_str(time, "%H:%M:%S")
+                .map_err(|_| HaError::UsageError("Failed to parse time".to_owned()))?
         } else {
             NaiveTime::from_hms(0, 0, 0)
         },
@@ -106,14 +109,19 @@ fn main() {
     if let Some(matches) = matches.subcommand_matches("parse-gtfs") {
         let gtfs_path = Path::new(matches.value_of("GTFS_PATH").unwrap());
         let data = RailroadData::from_gtfs(gtfs_path, (start_time, end_time))
-            .expect("Could not load GTFS database");
-        let file = File::create(path).expect("Could not open database file for writing");
-        serialize_into(file, &data).expect("Could not serialize database");
-        return;
+            .map_err(|_| HaError::UsageError("Could not load GTFS database".to_owned()))?;
+        let file = File::create(path).map_err(|_| {
+            HaError::UsageError("Could not open database file for writing".to_owned())
+        })?;
+        serialize_into(file, &data)
+            .map_err(|_| HaError::UsageError("Could not serialize database".to_owned()))?;
+        return Ok(());
     }
 
-    let file = File::open(path).expect("Could not open database file");
-    let data: RailroadData = deserialize_from(file).expect("Could not deserialize database");
+    let file = File::open(path)
+        .map_err(|_| HaError::UsageError("Could not open database file".to_owned()))?;
+    let data: RailroadData = deserialize_from(file)
+        .map_err(|_| HaError::UsageError("Could not deserialize database".to_owned()))?;
     if let Some(_) = matches.subcommand_matches("list-stations") {
         let mut stations: Vec<_> = data.stations().collect();
         stations.sort_by_key(|s| s.id());
@@ -126,16 +134,16 @@ fn main() {
         } else {
             stations.into_iter().for_each(|s| println!("{}", s));
         }
-        return;
+        return Ok(());
     }
 
     if let Some(matches) = matches.subcommand_matches("find") {
         let start_station = data
             .find_station(matches.value_of("START_STATION").unwrap())
-            .expect("Could not find source station");
+            .ok_or_else(|| HaError::UsageError("Could not find source station".to_owned()))?;
         let end_station = data
             .find_station(matches.value_of("DEST_STATION").unwrap())
-            .expect("Could not find dest station");
+            .ok_or_else(|| HaError::UsageError("Could not find dest station".to_owned()))?;
         let routes = if matches.is_present("multiple") {
             harail::get_multiple_routes(&data, start_time, start_station, end_station)
         } else if matches.is_present("delayed") {
@@ -145,11 +153,11 @@ fn main() {
                 start_station,
                 end_station,
             )
-            .expect("Could not find best route")]
+            .ok_or_else(|| HaError::UsageError("No such route".to_owned()))?]
         } else {
             vec![
                 harail::get_best_single_route(&data, start_time, start_station, end_station)
-                    .expect("Could not find best route"),
+                    .ok_or_else(|| HaError::UsageError("No such route".to_owned()))?,
             ]
         };
         if matches.is_present("json") {
@@ -161,6 +169,10 @@ fn main() {
         } else {
             routes.into_iter().for_each(|r| println!("{}", r));
         }
-        return;
+        return Ok(());
     }
+
+    return Err(Box::new(HaError::UsageError(
+        "No operation specified".to_owned(),
+    )));
 }
