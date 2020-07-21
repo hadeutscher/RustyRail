@@ -4,8 +4,9 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+mod errors;
 mod graph;
-pub mod gtfs;
+mod gtfs;
 
 #[macro_use(object)]
 extern crate json;
@@ -15,7 +16,8 @@ use json::JsonValue;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-use gtfs::{RailroadData, Station, Stop, Train};
+pub use errors::HaError;
+pub use gtfs::{RailroadData, Station, Stop, Train};
 
 pub trait JSON {
     fn to_json(&self) -> JsonValue;

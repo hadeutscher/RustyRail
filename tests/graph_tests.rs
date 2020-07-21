@@ -5,8 +5,8 @@
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 mod test_data;
-use harail::gtfs::{RailroadData, Stop, Train};
 use harail::RoutePart;
+use harail::{RailroadData, Stop, Train};
 use test_data::time;
 
 #[test]
