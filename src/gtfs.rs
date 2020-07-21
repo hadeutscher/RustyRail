@@ -254,7 +254,7 @@ impl RailroadData {
     ///
     /// The function panics if the identifier doesn't exist. For example:
     /// ```should_panic
-    /// let data = harail::gtfs::RailroadData::new();
+    /// let data = harail::RailroadData::new();
     /// let station = data.station(123);
     /// ```
     pub fn station(&self, id: StationId) -> &Station {
@@ -265,7 +265,7 @@ impl RailroadData {
     ///
     /// The function panics if the identifier doesn't exist. For example:
     /// ```should_panic
-    /// let data = harail::gtfs::RailroadData::new();
+    /// let data = harail::RailroadData::new();
     /// let train = data.train("123");
     /// ```
     pub fn train(&self, id: &str) -> &Train {
@@ -286,7 +286,7 @@ impl RailroadData {
     ///
     /// Examples:
     /// ```
-    /// use harail::gtfs::{RailroadData, Station};
+    /// use harail::{RailroadData, Station};
     ///
     /// let data = RailroadData::from_stations_trains(vec![Station::new(100, "test")], vec![]);
     /// let station = data.find_station("test").unwrap();

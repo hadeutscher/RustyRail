@@ -10,7 +10,7 @@ extern crate json;
 use bincode::{deserialize_from, serialize_into};
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use clap::{App, Arg, SubCommand};
-use harail::{gtfs::RailroadData, JSON};
+use harail::{RailroadData, JSON};
 use json::JsonValue;
 use std::{fs::File, path::Path};
 
@@ -105,7 +105,7 @@ fn main() {
 
     if let Some(matches) = matches.subcommand_matches("parse-gtfs") {
         let gtfs_path = Path::new(matches.value_of("GTFS_PATH").unwrap());
-        let data = harail::gtfs::RailroadData::from_gtfs(gtfs_path, (start_time, end_time))
+        let data = RailroadData::from_gtfs(gtfs_path, (start_time, end_time))
             .expect("Could not load GTFS database");
         let file = File::create(path).expect("Could not open database file for writing");
         serialize_into(file, &data).expect("Could not serialize database");
