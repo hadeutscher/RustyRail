@@ -27,22 +27,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .index(1),
         )
         .arg(
-            Arg::with_name("date")
-                .short("d")
-                .long("date")
-                .value_name("DATE")
-                .help("Specify date in DD/MM/YYYY format (default: today)")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("time")
-                .short("t")
-                .long("time")
-                .value_name("TIME")
-                .help("Specify time in HH:MM:SS format (default: midnight)")
-                .takes_value(true),
-        )
-        .arg(
             Arg::with_name("json")
                 .short("j")
                 .long("json")
@@ -64,6 +48,30 @@ fn main() -> Result<(), Box<dyn Error>> {
                         .help("The ID of the destination station")
                         .index(2)
                         .required(true),
+                )
+                .arg(
+                    Arg::with_name("date")
+                        .short("d")
+                        .long("date")
+                        .value_name("DATE")
+                        .help("Specify date in DD/MM/YYYY format (default: today)")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("time")
+                        .short("t")
+                        .long("time")
+                        .value_name("TIME")
+                        .help("Specify time in HH:MM:SS format (default: midnight)")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("length")
+                        .short("l")
+                        .long("length")
+                        .value_name("LENGTH")
+                        .help("Specify length, in days, of the time period to search in (default: 1 day)")
+                        .takes_value(true),
                 )
                 .arg(
                     Arg::with_name("delayed-leave")
@@ -94,21 +102,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         )
         .get_matches();
 
-    let start_time = NaiveDateTime::new(
-        if let Some(date) = matches.value_of("date") {
-            NaiveDate::parse_from_str(date, "%d/%m/%Y")
-                .map_err(|_| HaError::UsageError("Failed to parse date".to_owned()))?
-        } else {
-            chrono::Local::now().date().naive_local()
-        },
-        if let Some(time) = matches.value_of("time") {
-            NaiveTime::parse_from_str(time, "%H:%M:%S")
-                .map_err(|_| HaError::UsageError("Failed to parse time".to_owned()))?
-        } else {
-            NaiveTime::from_hms(0, 0, 0)
-        },
-    );
-    let end_time = start_time + chrono::Duration::days(1);
     let path = Path::new(matches.value_of("DATABASE").unwrap());
 
     if let Some(matches) = matches.subcommand_matches("parse-gtfs") {
@@ -170,6 +163,25 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     if let Some(matches) = matches.subcommand_matches("find") {
+        let start_time = NaiveDateTime::new(
+            if let Some(date) = matches.value_of("date") {
+                NaiveDate::parse_from_str(date, "%d/%m/%Y")
+                    .map_err(|_| HaError::UsageError("Failed to parse date".to_owned()))?
+            } else {
+                chrono::Local::now().date().naive_local()
+            },
+            if let Some(time) = matches.value_of("time") {
+                NaiveTime::parse_from_str(time, "%H:%M:%S")
+                    .map_err(|_| HaError::UsageError("Failed to parse time".to_owned()))?
+            } else {
+                NaiveTime::from_hms(0, 0, 0)
+            },
+        );
+        let n_days = matches
+            .value_of("length")
+            .map_or_else(|| Ok(1), |x| x.parse())
+            .map_err(|_| HaError::UsageError("Failed to parse length".to_owned()))?;
+        let end_time = start_time + chrono::Duration::days(n_days);
         let start_station = data
             .find_station(matches.value_of("START_STATION").unwrap())
             .ok_or_else(|| HaError::UsageError("Could not find source station".to_owned()))?;
