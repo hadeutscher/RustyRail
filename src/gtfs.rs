@@ -6,9 +6,10 @@
 
 use crate::HaError;
 use crate::JSON;
-use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{Datelike, Duration, NaiveDate};
 use json::JsonValue;
-use serde::{Deserialize, Serialize};
+use serde::de::Visitor;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt;
@@ -101,35 +102,107 @@ impl Station {
     }
 }
 
-/// Represents a train stopping at a certain station
-#[derive(PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Stop {
-    station: StationId,
-    arrival: NaiveDateTime,
-    departure: NaiveDateTime,
+/// Represents a duration in seconds. Used instead of chrono::Duration since the latter doesn't support serde.
+#[derive(Copy, Clone)]
+pub struct HaDuration {
+    seconds: u64,
 }
 
-impl fmt::Display for Stop {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.arrival == self.departure {
-            write!(f, "{}: {}", self.station, self.arrival)
-        } else {
-            write!(f, "{}: {}-{}", self.station, self.arrival, self.departure)
+impl HaDuration {
+    /// Create a new HaDuration object from hours, minutes and seconds
+    pub fn from_hms(h: u32, m: u32, s: u32) -> Self {
+        HaDuration {
+            seconds: (h as u64) * 3600 + (m as u64) * 60 + s as u64,
         }
+    }
+
+    /// Create a new Haduration object from seconds only
+    pub fn from_seconds(s: u64) -> Self {
+        HaDuration { seconds: s }
+    }
+
+    /// Convert to a chrono duration
+    ///
+    /// Examples:
+    /// ```
+    /// use harail::HaDuration;
+    /// use chrono::Duration;
+    ///
+    /// let d = HaDuration::from_hms(10, 30, 40);
+    /// let c = Duration::hours(10) + Duration::minutes(30) + Duration::seconds(40);
+    /// assert_eq!(c, d.to_chrono());
+    /// ```
+    pub fn to_chrono(&self) -> Duration {
+        Duration::seconds(self.seconds as i64)
     }
 }
 
-impl Stop {
+impl fmt::Display for HaDuration {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}:{}:{}",
+            self.seconds / 3600,
+            (self.seconds % 3600) / 60,
+            self.seconds % 60
+        )
+    }
+}
+
+impl Serialize for HaDuration {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_u64(self.seconds)
+    }
+}
+
+struct HaDurationVisitor;
+
+impl<'de> Visitor<'de> for HaDurationVisitor {
+    type Value = HaDuration;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("an integer between 0 and 2^32")
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(HaDuration::from_seconds(value))
+    }
+}
+
+impl<'de> Deserialize<'de> for HaDuration {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_u64(HaDurationVisitor)
+    }
+}
+
+/// Represents a train's scheduled stopping at a certain station
+#[derive(Serialize, Deserialize)]
+pub struct StopSchedule {
+    station: StationId,
+    arrival_offset: HaDuration,
+    departure_offset: HaDuration,
+}
+
+impl StopSchedule {
     /// Create a new Stop object
     pub fn new(
         station: StationId,
-        arrival: NaiveDateTime,
-        departure: Option<NaiveDateTime>,
+        arrival_offset: HaDuration,
+        departure_offset: Option<HaDuration>,
     ) -> Self {
         Self {
             station,
-            arrival,
-            departure: departure.unwrap_or(arrival),
+            arrival_offset,
+            departure_offset: departure_offset.unwrap_or(arrival_offset),
         }
     }
 
@@ -138,42 +211,35 @@ impl Stop {
         self.station
     }
 
-    /// The time the train has arrived at the station
-    pub fn arrival(&self) -> NaiveDateTime {
-        self.arrival
+    /// The time the train has arrived at the station, as offset from the start of the schedule
+    pub fn arrival_offset(&self) -> HaDuration {
+        self.arrival_offset
     }
 
-    /// The time the train has departed from the station.
+    /// The time the train has departed from the station, as offset from the start of the schedule.
     ///
-    /// This is usually the same as arrival time, unless the train waits at the station.
-    pub fn departure(&self) -> NaiveDateTime {
-        self.departure
+    /// This is usually the same as arrival offset, unless the train waits at the station.
+    pub fn departure_offset(&self) -> HaDuration {
+        self.departure_offset
     }
 }
 
 struct PrototypeTrain {
     id: TrainId,
-    stops: Vec<Option<Stop>>,
+    stops: Vec<Option<StopSchedule>>,
+    dates: Vec<NaiveDate>,
 }
 
-/// Represents a single train
+/// Represents a single train's schedule
 ///
-/// Note that this objects represents not the train but rather the act of the train moving from its initial station to its end station, possibly passing through other stations.
+/// Note that this objects represents not the train but rather the act of the train moving from its initial station to its end station, possibly passing through other stations, repeatedly over a number of days.
 /// For example, one physical train might be responsible for handling a line repetitively, traveling forward and backwards over it many times a day.
 /// Each such pass over this route from start to end (or vice versa) is represented by a Train object.
 #[derive(Serialize, Deserialize)]
 pub struct Train {
     id: TrainId,
-    stops: Vec<Stop>,
-}
-
-impl fmt::Display for Train {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for stop in &self.stops {
-            writeln!(f, "{}", stop)?;
-        }
-        Ok(())
-    }
+    stops: Vec<StopSchedule>,
+    dates: Vec<NaiveDate>,
 }
 
 impl PartialEq for Train {
@@ -196,14 +262,25 @@ impl Train {
         Self {
             id: id.to_owned(),
             stops: Vec::new(),
+            dates: Vec::new(),
         }
     }
 
-    /// Create a train object with certain stops
-    pub fn from_stops(id: &str, stops: Vec<Stop>) -> Self {
+    /// Create a train object with certain stops on a single day
+    pub fn from_stops_date(id: &str, stops: Vec<StopSchedule>, date: NaiveDate) -> Self {
         Self {
             id: id.to_owned(),
             stops,
+            dates: vec![date],
+        }
+    }
+
+    /// Create a train object with certain stops on multiple days
+    pub fn from_stops_dates(id: &str, stops: Vec<StopSchedule>, dates: Vec<NaiveDate>) -> Self {
+        Self {
+            id: id.to_owned(),
+            stops,
+            dates,
         }
     }
 
@@ -213,8 +290,13 @@ impl Train {
     }
 
     /// Iterate over the train stops
-    pub fn stops(&self) -> impl Iterator<Item = &Stop> {
+    pub fn stops(&self) -> impl Iterator<Item = &StopSchedule> {
         self.stops.iter()
+    }
+
+    /// Iterate over the train schedule days
+    pub fn dates(&self) -> impl Iterator<Item = &NaiveDate> {
+        self.dates.iter()
     }
 }
 
@@ -297,6 +379,40 @@ impl RailroadData {
         None
     }
 
+    /// Gets the start date of the database
+    pub fn start_date(&self) -> Option<NaiveDate> {
+        let mut result: Option<NaiveDate> = None;
+        for train in self.trains.values() {
+            for date in &train.dates {
+                if let Some(curr) = result {
+                    if date < &curr {
+                        result = Some(*date);
+                    }
+                } else {
+                    result = Some(*date);
+                }
+            }
+        }
+        result
+    }
+
+    /// Gets the end date of the database
+    pub fn end_date(&self) -> Option<NaiveDate> {
+        let mut result: Option<NaiveDate> = None;
+        for train in self.trains.values() {
+            for date in &train.dates {
+                if let Some(curr) = result {
+                    if date > &curr {
+                        result = Some(*date);
+                    }
+                } else {
+                    result = Some(*date);
+                }
+            }
+        }
+        result
+    }
+
     fn parse_agency(root: &Path) -> Result<u64, Box<dyn Error>> {
         let file = File::open(root.join("agency.txt"))?;
         let mut rdr = csv::Reader::from_reader(file);
@@ -363,7 +479,28 @@ impl RailroadData {
         Ok(())
     }
 
-    fn parse_calendar(root: &Path, date: NaiveDate) -> Result<HashSet<u64>, Box<dyn Error>> {
+    fn parse_gtfs_date(date: &str) -> Result<NaiveDate, Box<dyn Error>> {
+        let date_num: u32 = date.parse()?;
+        Ok(NaiveDate::from_ymd(
+            (date_num / 10000) as i32,
+            (date_num % 10000) / 100,
+            date_num % 100,
+        ))
+    }
+
+    fn parse_gtfs_daymap(period: (NaiveDate, NaiveDate), daymap: [bool; 7]) -> Vec<NaiveDate> {
+        let mut result = Vec::new();
+        let mut date = period.0;
+        while date <= period.1 {
+            if daymap[date.weekday().num_days_from_sunday() as usize] {
+                result.push(date);
+            }
+            date = date.succ();
+        }
+        result
+    }
+
+    fn parse_calendar(root: &Path) -> Result<HashMap<u64, Vec<NaiveDate>>, Box<dyn Error>> {
         let file = File::open(root.join("calendar.txt"))?;
         let mut rdr = csv::Reader::from_reader(file);
         let (
@@ -390,54 +527,50 @@ impl RailroadData {
             start_date,
             end_date
         );
-        let day_header = match date.weekday() {
-            chrono::Weekday::Sun => sunday,
-            chrono::Weekday::Mon => monday,
-            chrono::Weekday::Tue => tuesday,
-            chrono::Weekday::Wed => wednesday,
-            chrono::Weekday::Thu => thursday,
-            chrono::Weekday::Fri => friday,
-            chrono::Weekday::Sat => saturday,
-        };
-        let date_num =
-            (date.year() as u64 * 10000) + (date.month() as u64) * 100 + date.day() as u64;
-        let mut set = HashSet::new();
+        let mut map = HashMap::new();
         for result in rdr.records() {
             let record = result?;
             let service_id: u64 = record
                 .get(service_id)
                 .ok_or_else(|| HaError::GTFSError("service_id".to_owned()))?
                 .parse()?;
-            let start_date: u64 = record
-                .get(start_date)
-                .ok_or_else(|| HaError::GTFSError("start_date".to_owned()))?
-                .parse()?;
-            let end_date: u64 = record
-                .get(end_date)
-                .ok_or_else(|| HaError::GTFSError("end_date".to_owned()))?
-                .parse()?;
-            let day_availability: u64 = record
-                .get(day_header)
-                .ok_or_else(|| HaError::GTFSError("days".to_owned()))?
-                .parse()?;
-            /* Note that end date is inclusive */
-            if day_availability > 0 && start_date <= date_num && date_num <= end_date {
-                set.insert(service_id);
-            }
+            let start_date = Self::parse_gtfs_date(
+                record
+                    .get(start_date)
+                    .ok_or_else(|| HaError::GTFSError("start_date".to_owned()))?,
+            )?;
+            let end_date = Self::parse_gtfs_date(
+                record
+                    .get(end_date)
+                    .ok_or_else(|| HaError::GTFSError("end_date".to_owned()))?,
+            )?;
+            let daymap = [
+                record.get(sunday).unwrap_or("0") == "1",
+                record.get(monday).unwrap_or("0") == "1",
+                record.get(tuesday).unwrap_or("0") == "1",
+                record.get(wednesday).unwrap_or("0") == "1",
+                record.get(thursday).unwrap_or("0") == "1",
+                record.get(friday).unwrap_or("0") == "1",
+                record.get(saturday).unwrap_or("0") == "1",
+            ];
+            map.insert(
+                service_id,
+                Self::parse_gtfs_daymap((start_date, end_date), daymap),
+            );
         }
-        Ok(set)
+        Ok(map)
     }
 
     fn parse_trips(
         root: &Path,
-        irw_routes: &HashSet<u64>,
-        services: &HashSet<u64>,
-    ) -> Result<HashSet<String>, Box<dyn Error>> {
+        irw_routes: HashSet<u64>,
+        services: HashMap<u64, Vec<NaiveDate>>,
+    ) -> Result<HashMap<String, Option<Vec<NaiveDate>>>, Box<dyn Error>> {
         let file = File::open(root.join("trips.txt"))?;
         let mut rdr = csv::Reader::from_reader(file);
         let (route_id, trip_id, service_id) =
             headers!(rdr.headers()?, route_id, trip_id, service_id);
-        let mut set = HashSet::new();
+        let mut map = HashMap::new();
         for result in rdr.records() {
             let record = result?;
             let route_id: u64 = record
@@ -451,21 +584,17 @@ impl RailroadData {
                 .get(service_id)
                 .ok_or_else(|| HaError::GTFSError("service_id".to_owned()))?
                 .parse()?;
-            if !services.contains(&service_id) {
-                continue;
+            if let Some(dates) = services.get(&service_id) {
+                let trip_id = record
+                    .get(trip_id)
+                    .ok_or_else(|| HaError::GTFSError("trip_id".to_owned()))?;
+                map.insert(trip_id.to_owned(), Some(dates.clone()));
             }
-            let trip_id = record
-                .get(trip_id)
-                .ok_or_else(|| HaError::GTFSError("service_id".to_owned()))?;
-            set.insert(trip_id.to_owned());
         }
-        Ok(set)
+        Ok(map)
     }
 
-    fn parse_irw_time(
-        mut date: NaiveDate,
-        time_str: &str,
-    ) -> Result<NaiveDateTime, Box<dyn Error>> {
+    fn parse_gtfs_time(time_str: &str) -> Result<HaDuration, Box<dyn Error>> {
         let mut state = 0;
         let (mut h, mut m, mut s): (u32, u32, u32) = (0, 0, 0);
         for part in time_str.split(":") {
@@ -481,18 +610,13 @@ impl RailroadData {
             };
             state += 1;
         }
-        if h >= 24 {
-            date += chrono::Duration::days((h / 24) as i64);
-            h = h % 24;
-        }
-        Ok(NaiveDateTime::new(date, NaiveTime::from_hms(h, m, s)))
+        Ok(HaDuration::from_hms(h, m, s))
     }
 
     fn parse_stop_times(
         &mut self,
         root: &Path,
-        trips: &HashSet<String>,
-        date: NaiveDate,
+        mut trips: HashMap<String, Option<Vec<NaiveDate>>>,
         stations: &mut HashSet<u64>,
     ) -> Result<(), Box<dyn Error>> {
         let file = File::open(root.join("stop_times.txt"))?;
@@ -511,17 +635,17 @@ impl RailroadData {
             let trip_id = record
                 .get(trip_id)
                 .ok_or_else(|| HaError::GTFSError("trip_id".to_owned()))?;
-            if !trips.contains(trip_id) {
+            if !trips.contains_key(trip_id) {
                 continue;
             }
             let arrival_time = record
                 .get(arrival_time)
                 .ok_or_else(|| HaError::GTFSError("arrival_time".to_owned()))?;
-            let arrival_datetime = Self::parse_irw_time(date, arrival_time)?;
+            let arrival_datetime = Self::parse_gtfs_time(arrival_time)?;
             let departure_time = record
                 .get(departure_time)
                 .ok_or_else(|| HaError::GTFSError("departure_time".to_owned()))?;
-            let departure_datetime = Self::parse_irw_time(date, departure_time)?;
+            let departure_datetime = Self::parse_gtfs_time(departure_time)?;
             let stop_id: u64 = record
                 .get(stop_id)
                 .ok_or_else(|| HaError::GTFSError("stop_id".to_owned()))?
@@ -536,13 +660,18 @@ impl RailroadData {
                 )));
             }
             let stop_seq_index = stop_sequence as usize - 1;
-            let stop = Stop::new(stop_id, arrival_datetime, Some(departure_datetime));
+            let stop = StopSchedule::new(stop_id, arrival_datetime, Some(departure_datetime));
             if !proto_trains.contains_key(trip_id) {
+                // We take ownership of the dates vector from inside the trips table by replacing it with None.
+                // This should never panic because insert will never return None since we validated trips.contains_key(trip_id) before,
+                // and the optional vec is always set to Some by parse_trips, and only replaced once by us (we validate !proto_trains.contains_key(trip_id) here)
+                let dates = trips.insert(trip_id.to_owned(), None).unwrap().unwrap();
                 proto_trains.insert(
                     trip_id.to_owned(),
                     PrototypeTrain {
                         id: trip_id.to_owned(),
                         stops: Vec::new(),
+                        dates,
                     },
                 );
             }
@@ -567,6 +696,7 @@ impl RailroadData {
             let train = Train {
                 id: ptrain.id,
                 stops: ptrain.stops.into_iter().map(|x| x.unwrap()).collect(),
+                dates: ptrain.dates,
             };
             self.trains.insert(id, train);
         }
@@ -574,22 +704,14 @@ impl RailroadData {
     }
 
     /// Loads a GTFS file database.
-    pub fn from_gtfs(
-        root: &Path,
-        period: (NaiveDateTime, NaiveDateTime),
-    ) -> Result<Self, Box<dyn Error>> {
+    pub fn from_gtfs(root: &Path) -> Result<Self, Box<dyn Error>> {
         let irw_id = Self::parse_agency(root)?;
         let irw_routes = Self::parse_routes(root, irw_id)?;
         let mut result = Self::new();
-        let mut date = period.0.date();
-        let end_date = period.1.date();
         let mut stations = HashSet::new();
-        while date < end_date {
-            let services = Self::parse_calendar(root, date)?;
-            let trips = Self::parse_trips(root, &irw_routes, &services)?;
-            result.parse_stop_times(root, &trips, date, &mut stations)?;
-            date = date.succ();
-        }
+        let services = Self::parse_calendar(root)?;
+        let trips = Self::parse_trips(root, irw_routes, services)?;
+        result.parse_stop_times(root, trips, &mut stations)?;
         result.parse_stops(root, &stations)?;
         Ok(result)
     }
