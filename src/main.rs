@@ -27,28 +27,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .index(1),
         )
         .arg(
-            Arg::with_name("date")
-                .short("d")
-                .long("date")
-                .value_name("DATE")
-                .help("Specify date in DD/MM/YYYY format (default: today)")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("time")
-                .short("t")
-                .long("time")
-                .value_name("TIME")
-                .help("Specify time in HH:MM:SS format (default: midnight)")
-                .takes_value(true),
-        )
-        .arg(
             Arg::with_name("json")
                 .short("j")
                 .long("json")
                 .help("Output in JSON format"),
         )
         .subcommand(SubCommand::with_name("list-stations").about("Lists all stations"))
+        .subcommand(SubCommand::with_name("list-trains").about("Lists all trains"))
         .subcommand(
             SubCommand::with_name("find")
                 .about("Find paths between stations")
@@ -63,6 +48,30 @@ fn main() -> Result<(), Box<dyn Error>> {
                         .help("The ID of the destination station")
                         .index(2)
                         .required(true),
+                )
+                .arg(
+                    Arg::with_name("date")
+                        .short("d")
+                        .long("date")
+                        .value_name("DATE")
+                        .help("Specify date in DD/MM/YYYY format (default: today)")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("time")
+                        .short("t")
+                        .long("time")
+                        .value_name("TIME")
+                        .help("Specify time in HH:MM:SS format (default: midnight)")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("length")
+                        .short("l")
+                        .long("length")
+                        .value_name("LENGTH")
+                        .help("Specify length, in days, of the time period to search in (default: 1 day)")
+                        .takes_value(true),
                 )
                 .arg(
                     Arg::with_name("delayed-leave")
@@ -87,28 +96,17 @@ fn main() -> Result<(), Box<dyn Error>> {
                         .required(true),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("date-info")
+                .about("Print information regarding the database start and expiration dates"),
+        )
         .get_matches();
 
-    let start_time = NaiveDateTime::new(
-        if let Some(date) = matches.value_of("date") {
-            NaiveDate::parse_from_str(date, "%d/%m/%Y")
-                .map_err(|_| HaError::UsageError("Failed to parse date".to_owned()))?
-        } else {
-            chrono::Local::now().date().naive_local()
-        },
-        if let Some(time) = matches.value_of("time") {
-            NaiveTime::parse_from_str(time, "%H:%M:%S")
-                .map_err(|_| HaError::UsageError("Failed to parse time".to_owned()))?
-        } else {
-            NaiveTime::from_hms(0, 0, 0)
-        },
-    );
-    let end_time = start_time + chrono::Duration::days(1);
     let path = Path::new(matches.value_of("DATABASE").unwrap());
 
     if let Some(matches) = matches.subcommand_matches("parse-gtfs") {
         let gtfs_path = Path::new(matches.value_of("GTFS_PATH").unwrap());
-        let data = RailroadData::from_gtfs(gtfs_path, (start_time, end_time))
+        let data = RailroadData::from_gtfs(gtfs_path)
             .map_err(|_| HaError::UsageError("Could not load GTFS database".to_owned()))?;
         let file = File::create(path).map_err(|_| {
             HaError::UsageError("Could not open database file for writing".to_owned())
@@ -137,7 +135,53 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
+    if let Some(_) = matches.subcommand_matches("list-trains") {
+        let mut trains: Vec<_> = data.trains().collect();
+        trains.sort_by_key(|t| t.id());
+        trains.into_iter().for_each(|t| {
+            println!(
+                "{} : {} ({}) -> {} ({})",
+                t.id(),
+                t.stops().next().unwrap().station(),
+                t.stops().next().unwrap().departure_offset(),
+                t.stops().last().unwrap().station(),
+                t.stops().last().unwrap().arrival_offset()
+            )
+        });
+        return Ok(());
+    }
+
+    if let Some(_) = matches.subcommand_matches("date-info") {
+        let db_start = data
+            .start_date()
+            .ok_or_else(|| HaError::UsageError("Empty database".to_owned()))?;
+        let db_end = data
+            .end_date()
+            .ok_or_else(|| HaError::UsageError("Empty database".to_owned()))?;
+        println!("{} - {}", db_start, db_end);
+        return Ok(());
+    }
+
     if let Some(matches) = matches.subcommand_matches("find") {
+        let start_time = NaiveDateTime::new(
+            if let Some(date) = matches.value_of("date") {
+                NaiveDate::parse_from_str(date, "%d/%m/%Y")
+                    .map_err(|_| HaError::UsageError("Failed to parse date".to_owned()))?
+            } else {
+                chrono::Local::now().date().naive_local()
+            },
+            if let Some(time) = matches.value_of("time") {
+                NaiveTime::parse_from_str(time, "%H:%M:%S")
+                    .map_err(|_| HaError::UsageError("Failed to parse time".to_owned()))?
+            } else {
+                NaiveTime::from_hms(0, 0, 0)
+            },
+        );
+        let n_days = matches
+            .value_of("length")
+            .map_or_else(|| Ok(1), |x| x.parse())
+            .map_err(|_| HaError::UsageError("Failed to parse length".to_owned()))?;
+        let end_time = start_time + chrono::Duration::days(n_days);
         let start_station = data
             .find_station(matches.value_of("START_STATION").unwrap())
             .ok_or_else(|| HaError::UsageError("Could not find source station".to_owned()))?;
@@ -145,20 +189,25 @@ fn main() -> Result<(), Box<dyn Error>> {
             .find_station(matches.value_of("DEST_STATION").unwrap())
             .ok_or_else(|| HaError::UsageError("Could not find dest station".to_owned()))?;
         let routes = if matches.is_present("multiple") {
-            harail::get_multiple_routes(&data, start_time, start_station, end_station)
+            harail::get_multiple_routes(&data, start_time, start_station, end_time, end_station)
         } else if matches.is_present("delayed") {
             vec![harail::get_latest_good_single_route(
                 &data,
                 start_time,
                 start_station,
+                end_time,
                 end_station,
             )
             .ok_or_else(|| HaError::UsageError("No such route".to_owned()))?]
         } else {
-            vec![
-                harail::get_best_single_route(&data, start_time, start_station, end_station)
-                    .ok_or_else(|| HaError::UsageError("No such route".to_owned()))?,
-            ]
+            vec![harail::get_best_single_route(
+                &data,
+                start_time,
+                start_station,
+                end_time,
+                end_station,
+            )
+            .ok_or_else(|| HaError::UsageError("No such route".to_owned()))?]
         };
         if matches.is_present("json") {
             let mut json_routes = JsonValue::new_array();

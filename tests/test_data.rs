@@ -6,7 +6,7 @@
 
 use harail::Station;
 
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::NaiveDate;
 
 pub fn stations() -> Vec<Station> {
     vec![
@@ -19,9 +19,6 @@ pub fn stations() -> Vec<Station> {
     ]
 }
 
-pub fn time(h: u32, m: u32, s: u32) -> NaiveDateTime {
-    NaiveDateTime::new(
-        NaiveDate::from_ymd(2000, 01, 01),
-        NaiveTime::from_hms(h, m, s),
-    )
+pub fn test_date() -> NaiveDate {
+    NaiveDate::from_ymd(2000, 01, 01)
 }
