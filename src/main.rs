@@ -91,7 +91,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .about("Parse a GTFS database")
                 .arg(
                     Arg::with_name("GTFS_PATH")
-                        .help("The GTFS database to parse")
+                        .help("The GTFS database to parse, in zip file or directory form")
                         .index(1)
                         .required(true),
                 ),
@@ -106,7 +106,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let Some(matches) = matches.subcommand_matches("parse-gtfs") {
         let gtfs_path = Path::new(matches.value_of("GTFS_PATH").unwrap());
-        let data = RailroadData::from_gtfs(gtfs_path)
+        let load_result = if gtfs_path.is_dir() {
+            RailroadData::from_gtfs_directory(gtfs_path)
+        } else {
+            RailroadData::from_gtfs_zip(gtfs_path)
+        };
+        let data = load_result
             .map_err(|_| HaError::UsageError("Could not load GTFS database".to_owned()))?;
         let file = File::create(path).map_err(|_| {
             HaError::UsageError("Could not open database file for writing".to_owned())

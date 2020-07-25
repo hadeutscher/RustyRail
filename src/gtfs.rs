@@ -15,8 +15,10 @@ use std::error::Error;
 use std::fmt;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
+use std::io::prelude::*;
 use std::path::Path;
 use std::result::Result;
+use zip::ZipArchive;
 
 /// A unique identifier type for trains in the database
 pub type TrainId = String;
@@ -413,11 +415,10 @@ impl RailroadData {
         result
     }
 
-    fn parse_agency(root: &Path) -> Result<u64, Box<dyn Error>> {
-        let file = File::open(root.join("agency.txt"))?;
-        let mut rdr = csv::Reader::from_reader(file);
-        let (agency_id, agency_name) = headers!(rdr.headers()?, agency_id, agency_name);
-        for result in rdr.records() {
+    fn parse_agency<R: Read>(reader: R) -> Result<u64, Box<dyn Error>> {
+        let mut reader = csv::Reader::from_reader(reader);
+        let (agency_id, agency_name) = headers!(reader.headers()?, agency_id, agency_name);
+        for result in reader.records() {
             let record = result?;
             let agency_name = record.get(agency_name).ok_or_else(|| "agency_name")?;
             if agency_name == "רכבת ישראל" {
@@ -431,13 +432,12 @@ impl RailroadData {
         Err(Box::new(HaError::GTFSError("not found".to_owned())))
     }
 
-    fn parse_routes(root: &Path, irw_id: u64) -> Result<HashSet<u64>, Box<dyn Error>> {
-        let file = File::open(root.join("routes.txt"))?;
-        let mut rdr = csv::Reader::from_reader(file);
-        let (route_id, agency_id) = headers!(rdr.headers()?, route_id, agency_id);
+    fn parse_routes<R: Read>(reader: R, irw_id: u64) -> Result<HashSet<u64>, Box<dyn Error>> {
+        let mut reader = csv::Reader::from_reader(reader);
+        let (route_id, agency_id) = headers!(reader.headers()?, route_id, agency_id);
         let mut set = HashSet::new();
         let irw_id_str = irw_id.to_string();
-        for result in rdr.records() {
+        for result in reader.records() {
             let record = result?;
             let agency_id = record
                 .get(agency_id)
@@ -453,15 +453,14 @@ impl RailroadData {
         Ok(set)
     }
 
-    fn parse_stops(
+    fn parse_stops<R: Read>(
         &mut self,
-        root: &Path,
-        irw_stops: &HashSet<StationId>,
+        reader: R,
+        irw_stops: HashSet<StationId>,
     ) -> Result<(), Box<dyn Error>> {
-        let file = File::open(root.join("stops.txt"))?;
-        let mut rdr = csv::Reader::from_reader(file);
-        let (stop_id, stop_name) = headers!(rdr.headers()?, stop_id, stop_name);
-        for result in rdr.records() {
+        let mut reader = csv::Reader::from_reader(reader);
+        let (stop_id, stop_name) = headers!(reader.headers()?, stop_id, stop_name);
+        for result in reader.records() {
             let record = result?;
             let stop_id: u64 = record
                 .get(stop_id)
@@ -500,9 +499,8 @@ impl RailroadData {
         result
     }
 
-    fn parse_calendar(root: &Path) -> Result<HashMap<u64, Vec<NaiveDate>>, Box<dyn Error>> {
-        let file = File::open(root.join("calendar.txt"))?;
-        let mut rdr = csv::Reader::from_reader(file);
+    fn parse_calendar<R: Read>(reader: R) -> Result<HashMap<u64, Vec<NaiveDate>>, Box<dyn Error>> {
+        let mut reader = csv::Reader::from_reader(reader);
         let (
             service_id,
             sunday,
@@ -515,7 +513,7 @@ impl RailroadData {
             start_date,
             end_date,
         ) = headers!(
-            rdr.headers()?,
+            reader.headers()?,
             service_id,
             sunday,
             monday,
@@ -528,7 +526,7 @@ impl RailroadData {
             end_date
         );
         let mut map = HashMap::new();
-        for result in rdr.records() {
+        for result in reader.records() {
             let record = result?;
             let service_id: u64 = record
                 .get(service_id)
@@ -561,17 +559,16 @@ impl RailroadData {
         Ok(map)
     }
 
-    fn parse_trips(
-        root: &Path,
+    fn parse_trips<R: Read>(
+        reader: R,
         irw_routes: HashSet<u64>,
         services: HashMap<u64, Vec<NaiveDate>>,
     ) -> Result<HashMap<String, Option<Vec<NaiveDate>>>, Box<dyn Error>> {
-        let file = File::open(root.join("trips.txt"))?;
-        let mut rdr = csv::Reader::from_reader(file);
+        let mut reader = csv::Reader::from_reader(reader);
         let (route_id, trip_id, service_id) =
-            headers!(rdr.headers()?, route_id, trip_id, service_id);
+            headers!(reader.headers()?, route_id, trip_id, service_id);
         let mut map = HashMap::new();
-        for result in rdr.records() {
+        for result in reader.records() {
             let record = result?;
             let route_id: u64 = record
                 .get(route_id)
@@ -613,24 +610,23 @@ impl RailroadData {
         Ok(HaDuration::from_hms(h, m, s))
     }
 
-    fn parse_stop_times(
+    fn parse_stop_times<R: Read>(
         &mut self,
-        root: &Path,
+        reader: R,
         mut trips: HashMap<String, Option<Vec<NaiveDate>>>,
-        stations: &mut HashSet<u64>,
-    ) -> Result<(), Box<dyn Error>> {
-        let file = File::open(root.join("stop_times.txt"))?;
-        let mut rdr = csv::Reader::from_reader(file);
+    ) -> Result<HashSet<u64>, Box<dyn Error>> {
+        let mut reader = csv::Reader::from_reader(reader);
         let (trip_id, arrival_time, departure_time, stop_id, stop_sequence) = headers!(
-            rdr.headers()?,
+            reader.headers()?,
             trip_id,
             arrival_time,
             departure_time,
             stop_id,
             stop_sequence
         );
+        let mut stations = HashSet::new();
         let mut proto_trains = HashMap::new();
-        for result in rdr.records() {
+        for result in reader.records() {
             let record = result?;
             let trip_id = record
                 .get(trip_id)
@@ -700,19 +696,34 @@ impl RailroadData {
             };
             self.trains.insert(id, train);
         }
-        Ok(())
+        Ok(stations)
     }
 
-    /// Loads a GTFS file database.
-    pub fn from_gtfs(root: &Path) -> Result<Self, Box<dyn Error>> {
-        let irw_id = Self::parse_agency(root)?;
-        let irw_routes = Self::parse_routes(root, irw_id)?;
+    /// Loads a GTFS file database from a directory containing GTFS text files.
+    pub fn from_gtfs_directory(root: &Path) -> Result<Self, Box<dyn Error>> {
+        let irw_id = Self::parse_agency(File::open(root.join("agency.txt"))?)?;
+        let irw_routes = Self::parse_routes(File::open(root.join("routes.txt"))?, irw_id)?;
+        let services = Self::parse_calendar(File::open(root.join("calendar.txt"))?)?;
+        let irw_trips =
+            Self::parse_trips(File::open(root.join("trips.txt"))?, irw_routes, services)?;
         let mut result = Self::new();
-        let mut stations = HashSet::new();
-        let services = Self::parse_calendar(root)?;
-        let trips = Self::parse_trips(root, irw_routes, services)?;
-        result.parse_stop_times(root, trips, &mut stations)?;
-        result.parse_stops(root, &stations)?;
+        let irw_stops =
+            result.parse_stop_times(File::open(root.join("stop_times.txt"))?, irw_trips)?;
+        result.parse_stops(File::open(root.join("stops.txt"))?, irw_stops)?;
+        Ok(result)
+    }
+
+    /// Loads a GTFS file database from a zip file containing GTFS text files.
+    pub fn from_gtfs_zip(root: &Path) -> Result<Self, Box<dyn Error>> {
+        let file = File::open(root)?;
+        let mut zip = ZipArchive::new(file)?;
+        let irw_id = Self::parse_agency(zip.by_name("agency.txt")?)?;
+        let irw_routes = Self::parse_routes(zip.by_name("routes.txt")?, irw_id)?;
+        let services = Self::parse_calendar(zip.by_name("calendar.txt")?)?;
+        let irw_trips = Self::parse_trips(zip.by_name("trips.txt")?, irw_routes, services)?;
+        let mut result = Self::new();
+        let irw_stops = result.parse_stop_times(zip.by_name("stop_times.txt")?, irw_trips)?;
+        result.parse_stops(zip.by_name("stops.txt")?, irw_stops)?;
         Ok(result)
     }
 }
