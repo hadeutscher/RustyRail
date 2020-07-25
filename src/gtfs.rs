@@ -302,6 +302,21 @@ impl Train {
     }
 }
 
+enum FileOpener<'p, R: Read + Seek> {
+    PathFileOpener(&'p Path),
+    ZipFileOpener(ZipArchive<R>),
+}
+
+impl<'p, R: Read + Seek> FileOpener<'p, R> {
+    fn open<'a>(&'a mut self, name: &str) -> Result<Box<dyn Read + 'a>, Box<dyn Error>> {
+        let result: Box<dyn Read> = match self {
+            FileOpener::PathFileOpener(path) => Box::new(File::open(path.join(name))?),
+            FileOpener::ZipFileOpener(zip) => Box::new(zip.by_name(name)?),
+        };
+        Ok(result)
+    }
+}
+
 /// A database of all available trains and stations
 #[derive(Serialize, Deserialize)]
 pub struct RailroadData {
@@ -699,31 +714,30 @@ impl RailroadData {
         Ok(stations)
     }
 
+    fn load_gtfs<'p, R: Read + Seek>(
+        mut opener: FileOpener<'p, R>,
+    ) -> Result<Self, Box<dyn Error>> {
+        let irw_id = Self::parse_agency(opener.open("agency.txt")?)?;
+        let irw_routes = Self::parse_routes(opener.open("routes.txt")?, irw_id)?;
+        let services = Self::parse_calendar(opener.open("calendar.txt")?)?;
+        let irw_trips = Self::parse_trips(opener.open("trips.txt")?, irw_routes, services)?;
+        let mut result = Self::new();
+        let irw_stops = result.parse_stop_times(opener.open("stop_times.txt")?, irw_trips)?;
+        result.parse_stops(opener.open("stops.txt")?, irw_stops)?;
+        Ok(result)
+    }
+
     /// Loads a GTFS file database from a directory containing GTFS text files.
     pub fn from_gtfs_directory(root: &Path) -> Result<Self, Box<dyn Error>> {
-        let irw_id = Self::parse_agency(File::open(root.join("agency.txt"))?)?;
-        let irw_routes = Self::parse_routes(File::open(root.join("routes.txt"))?, irw_id)?;
-        let services = Self::parse_calendar(File::open(root.join("calendar.txt"))?)?;
-        let irw_trips =
-            Self::parse_trips(File::open(root.join("trips.txt"))?, irw_routes, services)?;
-        let mut result = Self::new();
-        let irw_stops =
-            result.parse_stop_times(File::open(root.join("stop_times.txt"))?, irw_trips)?;
-        result.parse_stops(File::open(root.join("stops.txt"))?, irw_stops)?;
-        Ok(result)
+        let opener = FileOpener::PathFileOpener::<File>(root);
+        Self::load_gtfs(opener)
     }
 
     /// Loads a GTFS file database from a zip file containing GTFS text files.
     pub fn from_gtfs_zip(root: &Path) -> Result<Self, Box<dyn Error>> {
         let file = File::open(root)?;
-        let mut zip = ZipArchive::new(file)?;
-        let irw_id = Self::parse_agency(zip.by_name("agency.txt")?)?;
-        let irw_routes = Self::parse_routes(zip.by_name("routes.txt")?, irw_id)?;
-        let services = Self::parse_calendar(zip.by_name("calendar.txt")?)?;
-        let irw_trips = Self::parse_trips(zip.by_name("trips.txt")?, irw_routes, services)?;
-        let mut result = Self::new();
-        let irw_stops = result.parse_stop_times(zip.by_name("stop_times.txt")?, irw_trips)?;
-        result.parse_stops(zip.by_name("stops.txt")?, irw_stops)?;
-        Ok(result)
+        let zip = ZipArchive::new(file)?;
+        let opener = FileOpener::ZipFileOpener(zip);
+        Self::load_gtfs(opener)
     }
 }
