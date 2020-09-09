@@ -4,6 +4,8 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+mod opener;
+
 use crate::HaError;
 use crate::JSON;
 use chrono::{Datelike, Duration, NaiveDate};
@@ -16,6 +18,7 @@ use std::fmt;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::prelude::*;
+use std::io::BufReader;
 use std::path::Path;
 use std::result::Result;
 use zip::ZipArchive;
@@ -299,21 +302,6 @@ impl Train {
     /// Iterate over the train schedule days
     pub fn dates(&self) -> impl Iterator<Item = &NaiveDate> {
         self.dates.iter()
-    }
-}
-
-enum FileOpener<'p, R: Read + Seek> {
-    PathFileOpener(&'p Path),
-    ZipFileOpener(ZipArchive<R>),
-}
-
-impl<'p, R: Read + Seek> FileOpener<'p, R> {
-    fn open<'a>(&'a mut self, name: &str) -> Result<Box<dyn Read + 'a>, Box<dyn Error>> {
-        let result: Box<dyn Read> = match self {
-            FileOpener::PathFileOpener(path) => Box::new(File::open(path.join(name))?),
-            FileOpener::ZipFileOpener(zip) => Box::new(zip.by_name(name)?),
-        };
-        Ok(result)
     }
 }
 
@@ -714,9 +702,7 @@ impl RailroadData {
         Ok(stations)
     }
 
-    fn load_gtfs<'p, R: Read + Seek>(
-        mut opener: FileOpener<'p, R>,
-    ) -> Result<Self, Box<dyn Error>> {
+    fn load_gtfs<T: for<'a> opener::FileOpener<'a>>(mut opener: T) -> Result<Self, Box<dyn Error>> {
         let irw_id = Self::parse_agency(opener.open("agency.txt")?)?;
         let irw_routes = Self::parse_routes(opener.open("routes.txt")?, irw_id)?;
         let services = Self::parse_calendar(opener.open("calendar.txt")?)?;
@@ -729,15 +715,16 @@ impl RailroadData {
 
     /// Loads a GTFS file database from a directory containing GTFS text files.
     pub fn from_gtfs_directory(root: &Path) -> Result<Self, Box<dyn Error>> {
-        let opener = FileOpener::PathFileOpener::<File>(root);
+        let opener = opener::PathFileOpener::new(root);
         Self::load_gtfs(opener)
     }
 
     /// Loads a GTFS file database from a zip file containing GTFS text files.
     pub fn from_gtfs_zip(root: &Path) -> Result<Self, Box<dyn Error>> {
         let file = File::open(root)?;
-        let zip = ZipArchive::new(file)?;
-        let opener = FileOpener::ZipFileOpener(zip);
+        let reader = BufReader::new(file);
+        let zip = ZipArchive::new(reader)?;
+        let opener = opener::ZipFileOpener::new(zip);
         Self::load_gtfs(opener)
     }
 }
