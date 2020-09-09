@@ -13,7 +13,9 @@ use clap::{App, Arg, SubCommand};
 use harail::{HaError, RailroadData, JSON};
 use json::JsonValue;
 use std::error::Error;
-use std::{fs::File, path::Path};
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
+use std::path::Path;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let matches = App::new("HaRail")
@@ -116,14 +118,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         let file = File::create(path).map_err(|_| {
             HaError::UsageError("Could not open database file for writing".to_owned())
         })?;
-        serialize_into(file, &data)
+        let writer = BufWriter::new(file);
+        serialize_into(writer, &data)
             .map_err(|_| HaError::UsageError("Could not serialize database".to_owned()))?;
         return Ok(());
     }
 
     let file = File::open(path)
         .map_err(|_| HaError::UsageError("Could not open database file".to_owned()))?;
-    let data: RailroadData = deserialize_from(file)
+    let reader = BufReader::new(file);
+    let data: RailroadData = deserialize_from(reader)
         .map_err(|_| HaError::UsageError("Could not deserialize database".to_owned()))?;
     if let Some(_) = matches.subcommand_matches("list-stations") {
         let mut stations: Vec<_> = data.stations().collect();

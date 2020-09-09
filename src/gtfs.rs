@@ -18,6 +18,7 @@ use std::fmt;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::prelude::*;
+use std::io::BufReader;
 use std::path::Path;
 use std::result::Result;
 use zip::ZipArchive;
@@ -721,7 +722,8 @@ impl RailroadData {
     /// Loads a GTFS file database from a zip file containing GTFS text files.
     pub fn from_gtfs_zip(root: &Path) -> Result<Self, Box<dyn Error>> {
         let file = File::open(root)?;
-        let zip = ZipArchive::new(file)?;
+        let reader = BufReader::new(file);
+        let zip = ZipArchive::new(reader)?;
         let opener = opener::ZipFileOpener::new(zip);
         Self::load_gtfs(opener)
     }
