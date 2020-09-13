@@ -34,11 +34,24 @@ pub struct Stop<'a> {
     departure: NaiveDateTime,
 }
 
+impl<'a> JSON for Stop<'a> {
+    fn to_json(&self) -> JsonValue {
+        let arrival = DateTime::<Utc>::from_utc(self.arrival(), Utc);
+        let departure = DateTime::<Utc>::from_utc(self.departure(), Utc);
+        object! {
+            station: self.station.id().to_owned(),
+            arrival: arrival.to_rfc3339(),
+            departure: departure.to_rfc3339(),
+        }
+    }
+}
+
 impl<'a> Stop<'a> {
     fn inflate_stop_time(date: NaiveDate, offset: HaDuration) -> NaiveDateTime {
         NaiveDateTime::new(date, NaiveTime::from_hms(0, 0, 0)) + offset.to_chrono()
     }
 
+    /// Construct a Stop object from a StopSchedule and a specific date
     pub fn from_stop_schedule(
         data: &'a RailroadData,
         stop: &StopSchedule,
