@@ -83,8 +83,8 @@ fn graph_processing(c: &mut Criterion) {
         NaiveTime::from_hms(10, 0, 0),
     );
 
-    let start_station = data.station(37382);
-    let end_station = data.station(37382);
+    let start_station = data.station(37382).unwrap();
+    let end_station = data.station(37382).unwrap();
 
     c.bench_function("1 day path finding", |b| {
         b.iter(|| {
