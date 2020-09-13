@@ -26,49 +26,49 @@ fn graph_time_cutoff() {
     let route = harail::get_best_single_route(
         &data,
         NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
-        data.station(100),
+        data.station(100).unwrap(),
         NaiveDateTime::new(test_date(), NaiveTime::from_hms(12, 00, 00)),
-        data.station(300),
+        data.station(300).unwrap(),
     );
     assert!(route.is_some());
     let route = harail::get_best_single_route(
         &data,
         NaiveDateTime::new(test_date().succ(), NaiveTime::from_hms(10, 00, 00)),
-        data.station(100),
+        data.station(100).unwrap(),
         NaiveDateTime::new(test_date().succ(), NaiveTime::from_hms(12, 00, 00)),
-        data.station(300),
+        data.station(300).unwrap(),
     );
     assert!(route.is_some());
     let route = harail::get_best_single_route(
         &data,
         NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
-        data.station(100),
+        data.station(100).unwrap(),
         NaiveDateTime::new(test_date().succ(), NaiveTime::from_hms(12, 00, 00)),
-        data.station(400),
+        data.station(400).unwrap(),
     );
     assert!(route.is_some());
     let route = harail::get_best_single_route(
         &data,
         NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
-        data.station(100),
+        data.station(100).unwrap(),
         NaiveDateTime::new(test_date().succ(), NaiveTime::from_hms(00, 00, 00)),
-        data.station(400),
+        data.station(400).unwrap(),
     );
     assert!(route.is_some());
     let route = harail::get_best_single_route(
         &data,
         NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
-        data.station(100),
+        data.station(100).unwrap(),
         NaiveDateTime::new(test_date(), NaiveTime::from_hms(11, 29, 59)),
-        data.station(400),
+        data.station(400).unwrap(),
     );
     assert!(route.is_none());
     let route = harail::get_best_single_route(
         &data,
         NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
-        data.station(100),
+        data.station(100).unwrap(),
         NaiveDateTime::new(test_date(), NaiveTime::from_hms(11, 29, 59)),
-        data.station(300),
+        data.station(300).unwrap(),
     );
     assert!(route.is_some());
 }

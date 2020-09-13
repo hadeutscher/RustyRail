@@ -58,7 +58,7 @@ impl<'a> Stop<'a> {
         date: NaiveDate,
     ) -> Self {
         Stop {
-            station: data.station(stop.station()),
+            station: data.station(stop.station()).unwrap(),
             arrival: Self::inflate_stop_time(date, stop.arrival_offset()),
             departure: Self::inflate_stop_time(date, stop.departure_offset()),
         }
