@@ -17,7 +17,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 pub use errors::HaError;
-pub use gtfs::{HaDuration, RailroadData, Station, StopSchedule, Train};
+pub use gtfs::{HaDuration, RailroadData, Station, StationId, StopSchedule, Train, TrainId};
 
 /// An object which can be written to JSON.
 ///
