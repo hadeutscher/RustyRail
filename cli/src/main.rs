@@ -4,9 +4,6 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#[macro_use(object)]
-extern crate json;
-
 use bincode::{deserialize_from, serialize_into};
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use clap::{App, Arg, SubCommand};
@@ -16,6 +13,8 @@ use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::Path;
+
+const JSON_SPACES: u16 = 4;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let matches = App::new("HaRail")
@@ -133,11 +132,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut stations: Vec<_> = data.stations().collect();
         stations.sort_by_key(|s| s.id());
         if matches.is_present("json") {
-            let mut json_stations = JsonValue::new_array();
-            for station in stations {
-                json_stations.push(station.to_json()).unwrap()
-            }
-            println!("{}", object! {stations: json_stations }.dump());
+            let json = JsonValue::Array(stations.into_iter().map(|s| s.to_json()).collect());
+            println!("{}", json.pretty(JSON_SPACES));
         } else {
             stations.into_iter().for_each(|s| println!("{}", s));
         }
@@ -219,11 +215,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             .ok_or_else(|| HaError::UsageError("No such route".to_owned()))?]
         };
         if matches.is_present("json") {
-            let mut json_routes = JsonValue::new_array();
-            for route in routes {
-                json_routes.push(route.to_json()).unwrap()
-            }
-            println!("{}", object! {routes: json_routes }.dump());
+            let json = JsonValue::Array(routes.into_iter().map(|r| r.to_json()).collect());
+            println!("{}", json.pretty(JSON_SPACES));
         } else {
             routes.into_iter().for_each(|r| println!("{}", r));
         }

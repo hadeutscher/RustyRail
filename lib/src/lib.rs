@@ -17,7 +17,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 pub use errors::HaError;
-pub use gtfs::{HaDuration, RailroadData, Station, StopSchedule, Train};
+pub use gtfs::{HaDuration, RailroadData, Station, StationId, StopSchedule, Train, TrainId};
 
 /// An object which can be written to JSON.
 ///
@@ -34,18 +34,31 @@ pub struct Stop<'a> {
     departure: NaiveDateTime,
 }
 
+impl<'a> JSON for Stop<'a> {
+    fn to_json(&self) -> JsonValue {
+        let arrival = DateTime::<Utc>::from_utc(self.arrival(), Utc);
+        let departure = DateTime::<Utc>::from_utc(self.departure(), Utc);
+        object! {
+            station: self.station.id().to_owned(),
+            arrival: arrival.to_rfc3339(),
+            departure: departure.to_rfc3339(),
+        }
+    }
+}
+
 impl<'a> Stop<'a> {
     fn inflate_stop_time(date: NaiveDate, offset: HaDuration) -> NaiveDateTime {
         NaiveDateTime::new(date, NaiveTime::from_hms(0, 0, 0)) + offset.to_chrono()
     }
 
+    /// Construct a Stop object from a StopSchedule and a specific date
     pub fn from_stop_schedule(
         data: &'a RailroadData,
         stop: &StopSchedule,
         date: NaiveDate,
     ) -> Self {
         Stop {
-            station: data.station(stop.station()),
+            station: data.station(stop.station()).unwrap(),
             arrival: Self::inflate_stop_time(date, stop.arrival_offset()),
             departure: Self::inflate_stop_time(date, stop.departure_offset()),
         }

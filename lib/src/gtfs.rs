@@ -333,26 +333,14 @@ impl RailroadData {
         result
     }
 
-    /// Get the station with the given identifier.
-    ///
-    /// The function panics if the identifier doesn't exist. For example:
-    /// ```should_panic
-    /// let data = harail::RailroadData::new();
-    /// let station = data.station(123);
-    /// ```
-    pub fn station(&self, id: StationId) -> &Station {
-        &self.stations[&id]
+    /// Get the station with the given identifier
+    pub fn station(&self, id: StationId) -> Option<&Station> {
+        self.stations.get(&id)
     }
 
-    /// Get the train with the given identifier.
-    ///
-    /// The function panics if the identifier doesn't exist. For example:
-    /// ```should_panic
-    /// let data = harail::RailroadData::new();
-    /// let train = data.train("123");
-    /// ```
-    pub fn train(&self, id: &str) -> &Train {
-        &self.trains[id]
+    /// Get the train with the given identifier
+    pub fn train(&self, id: &str) -> Option<&Train> {
+        self.trains.get(id)
     }
 
     /// Iterates over the stations in the database

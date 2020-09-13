@@ -28,7 +28,7 @@ fn route_save() {
         test_date(),
     ));
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
-    let train = data.train("1");
+    let train = data.train("1").unwrap();
     let stops = train
         .stops()
         .map(|s| Stop::from_stop_schedule(&data, s, test_date()))
