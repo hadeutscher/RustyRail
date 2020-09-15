@@ -1,6 +1,6 @@
 # HaRail
 
-[![Build Status](https://github.com/hadeutscher/RustyRail/workflows/Rust/badge.svg)](https://github.com/hadeutscher/RustyRail/actions)
+[![Build Status](https://github.com/hadeutscher/RustyRail/workflows/CI/badge.svg)](https://github.com/hadeutscher/RustyRail/actions)
 
 Public transport fastest-route finder for Israel Railways (Rust rewrite)
 
