@@ -1,0 +1,8 @@
+version: "3.7"
+services:
+
+  harail_server:
+    build: .
+    ports:
+      - "8000:8000"
+    restart: always
