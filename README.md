@@ -21,7 +21,9 @@ Refer to `./harail_cli -h` for more options.
 
 ## Running a server
 
+```
 ./harail_server ~/harail.db
+```
 
 ## License
 
