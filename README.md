@@ -8,16 +8,20 @@ Public transport fastest-route finder for Israel Railways (Rust rewrite)
 
 `cargo build --release`
 
-## Running
+## Running from CLI
 
 ```
-./harail ~/harail.db parse-gtfs ~/israel-public-transportation/
-./harail ~/harail.db list-stations
+./harail_cli ~/harail.db parse-gtfs ~/israel-public-transportation/
+./harail_cli ~/harail.db list-stations
 ```
 
 If not present, obtain Israel's public transportation database from ftp://gtfs.mot.gov.il/israel-public-transportation.zip
 
-Refer to `./harail -h` for more options.
+Refer to `./harail_cli -h` for more options.
+
+## Running a server
+
+./harail_server ~/harail.db
 
 ## License
 

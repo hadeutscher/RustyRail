@@ -2,13 +2,18 @@
 name = "harail_cli"
 version = "0.1.0"
 authors = ["Yuval Deutscher"]
+license = "MPL-2.0"
+description = "Public transport fastest-route finder for Israel Railways (CLI)"
+repository = "https://github.com/hadeutscher/RustyRail"
+readme = "../README.md"
+keywords = ["transportation"]
+categories = ["command-line-utilities"]
 edition = "2018"
-default-run = "harail_cli"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-harail = { path = "../lib/" }
+harail = { version = "0.1.0", path = "../lib/" }
 chrono = "0.4"
 clap = "2.33.1"
 json = "0.12.4"
