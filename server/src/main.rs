@@ -12,17 +12,18 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use clap::{App, Arg};
 use harail::{RailroadData, StationId, Stop, JSON};
 use json::JsonValue;
+use rocket::form::{self, FromFormField, ValueField};
 use rocket::http::RawStr;
-use rocket::request::{Form, FromFormValue, FromParam};
+use rocket::request::FromParam;
 use rocket::response::{content, status};
 use rocket::State;
-use std::{error::Error, fs::File, io::BufReader, path::Path};
+use std::{fs::File, io::BufReader, path::Path};
 
 #[cfg(test)]
 mod tests;
 
 #[get("/stations")]
-fn list_stations(data: State<RailroadData>) -> content::Json<String> {
+fn list_stations(data: &State<RailroadData>) -> content::Json<String> {
     let json = JsonValue::Array(data.stations().map(|s| s.to_json()).collect());
     content::Json(json.dump())
 }
@@ -32,14 +33,18 @@ struct HaDate(NaiveDate);
 impl<'v> FromParam<'v> for HaDate {
     type Error = &'v RawStr;
 
-    fn from_param(param: &'v RawStr) -> Result<Self, Self::Error> {
+    fn from_param(param: &'v str) -> Result<Self, Self::Error> {
         let dt = param.parse::<DateTime<Utc>>().map_err(|_| param)?;
         Ok(HaDate(dt.naive_utc().date()))
     }
 }
 
 #[get("/trains/<id>/stops/<date>")]
-fn get_train(data: State<RailroadData>, id: String, date: HaDate) -> Option<content::Json<String>> {
+fn get_train(
+    data: &State<RailroadData>,
+    id: String,
+    date: HaDate,
+) -> Option<content::Json<String>> {
     let train = data.train(&id)?;
     let json = JsonValue::Array(
         train
@@ -50,7 +55,7 @@ fn get_train(data: State<RailroadData>, id: String, date: HaDate) -> Option<cont
     Some(content::Json(json.dump()))
 }
 
-#[derive(FromFormValue)]
+#[derive(FromFormField)]
 enum SearchType {
     Best,
     Latest,
@@ -59,13 +64,12 @@ enum SearchType {
 
 struct HaDateTime(NaiveDateTime);
 
-impl<'v> FromFormValue<'v> for HaDateTime {
-    type Error = &'v RawStr;
-
-    fn from_form_value(form_value: &'v RawStr) -> Result<Self, Self::Error> {
-        let dt = form_value
-            .parse::<DateTime<Utc>>()
-            .map_err(|_| form_value)?;
+#[rocket::async_trait]
+impl<'v> FromFormField<'v> for HaDateTime {
+    fn from_value(field: ValueField<'v>) -> form::Result<'v, Self> {
+        let dt = field.value.parse::<DateTime<Utc>>().map_err(|_| {
+            form::Error::validation(format! {"Cannot parse {} as date", field.value})
+        })?;
         Ok(HaDateTime(dt.naive_utc()))
     }
 }
@@ -81,8 +85,8 @@ struct FindOptions {
 
 #[get("/routes/find?<options..>")]
 fn find_route(
-    data: State<RailroadData>,
-    options: Form<FindOptions>,
+    data: &State<RailroadData>,
+    options: FindOptions,
 ) -> Result<content::Json<String>, status::NotFound<String>> {
     let start_station = data
         .station(options.start_station)
@@ -119,13 +123,14 @@ fn find_route(
     }))
 }
 
-fn rocket(data: RailroadData) -> rocket::Rocket {
-    rocket::ignite()
+fn rocket(data: RailroadData) -> rocket::Rocket<rocket::Build> {
+    rocket::build()
         .manage(data)
         .mount("/harail", routes![list_stations, get_train, find_route])
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[rocket::main]
+async fn main() -> Result<(), rocket::Error> {
     let matches = App::new("HaRail Server")
         .version("0.1")
         .author("Yuval Deutscher")
@@ -139,11 +144,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         .get_matches();
 
     let path = Path::new(matches.value_of("DATABASE").unwrap());
-    let file = File::open(path)?;
+    let file = File::open(path).unwrap();
     let reader = BufReader::new(file);
-    let data: RailroadData = deserialize_from(reader)?;
+    let data: RailroadData = deserialize_from(reader).unwrap();
 
-    let mut rt = tokio::runtime::Runtime::new()?;
-    rt.block_on(rocket(data).launch())?;
-    Ok(())
+    rocket(data).ignite().await?.launch().await
 }
