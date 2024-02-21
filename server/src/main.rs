@@ -15,7 +15,9 @@ use json::JsonValue;
 use rocket::form::{self, FromFormField, ValueField};
 use rocket::http::RawStr;
 use rocket::request::FromParam;
-use rocket::response::{content, status};
+use rocket::response::content::RawJson;
+use rocket::response::status;
+use rocket::serde::json::Json;
 use rocket::State;
 use std::{fs::File, io::BufReader, path::Path};
 
@@ -23,9 +25,9 @@ use std::{fs::File, io::BufReader, path::Path};
 mod tests;
 
 #[get("/stations")]
-fn list_stations(data: &State<RailroadData>) -> content::Json<String> {
+fn list_stations(data: &State<RailroadData>) -> RawJson<String> {
     let json = JsonValue::Array(data.stations().map(|s| s.to_json()).collect());
-    content::Json(json.dump())
+    RawJson(json.dump())
 }
 
 struct HaDate(NaiveDate);
@@ -40,11 +42,7 @@ impl<'v> FromParam<'v> for HaDate {
 }
 
 #[get("/trains/<id>/stops/<date>")]
-fn get_train(
-    data: &State<RailroadData>,
-    id: String,
-    date: HaDate,
-) -> Option<content::Json<String>> {
+fn get_train(data: &State<RailroadData>, id: String, date: HaDate) -> Option<RawJson<String>> {
     let train = data.train(&id)?;
     let json = JsonValue::Array(
         train
@@ -52,7 +50,7 @@ fn get_train(
             .map(|s| Stop::from_stop_schedule(&data, s, date.0).to_json())
             .collect(),
     );
-    Some(content::Json(json.dump()))
+    Some(RawJson(json.dump()))
 }
 
 #[derive(FromFormField)]
@@ -87,7 +85,7 @@ struct FindOptions {
 fn find_route(
     data: &State<RailroadData>,
     options: FindOptions,
-) -> Result<content::Json<String>, status::NotFound<String>> {
+) -> Result<RawJson<String>, status::NotFound<String>> {
     let start_station = data
         .station(options.start_station)
         .ok_or_else(|| status::NotFound(String::from("start station not found")))?;
@@ -96,7 +94,7 @@ fn find_route(
         .station(options.end_station)
         .ok_or_else(|| status::NotFound(String::from("end station not found")))?;
     let end_time = options.end_time.0;
-    Ok(content::Json(match options.search {
+    Ok(RawJson(match options.search {
         SearchType::Best => {
             harail::get_best_single_route(&data, start_time, start_station, end_time, end_station)
                 .ok_or_else(|| status::NotFound(String::from("no possible route found")))?
@@ -148,5 +146,6 @@ async fn main() -> Result<(), rocket::Error> {
     let reader = BufReader::new(file);
     let data: RailroadData = deserialize_from(reader).unwrap();
 
-    rocket(data).ignite().await?.launch().await
+    rocket(data).ignite().await?.launch().await?;
+    Ok(())
 }
