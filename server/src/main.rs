@@ -44,8 +44,8 @@ impl<'v> FromParam<'v> for HaDate {
 }
 
 #[get("/trains/<id>/stops/<date>")]
-fn get_train(data: &State<RailroadData>, id: String, date: HaDate) -> Option<RawJson<String>> {
-    let train = data.train(&id)?;
+fn get_train(data: &State<RailroadData>, id: &str, date: HaDate) -> Option<RawJson<String>> {
+    let train = data.train(id)?;
     let json = JsonValue::Array(
         train
             .stops()
