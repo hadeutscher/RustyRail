@@ -17,7 +17,6 @@ use rocket::http::RawStr;
 use rocket::request::FromParam;
 use rocket::response::content::RawJson;
 use rocket::response::status;
-use rocket::serde::json::Json;
 use rocket::State;
 use std::{fs::File, io::BufReader, path::Path};
 

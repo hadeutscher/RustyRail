@@ -104,7 +104,7 @@ impl<N: Eq + Hash + Copy, E: Eq + Hash + Copy + Weight> Graph<N, E> {
                 let weight = edge.weight();
                 assert!(weight >= 0);
                 let cost = node_best_cost + weight;
-                let mut node_dest_distance = distances.get_mut(n_dest).unwrap();
+                let node_dest_distance = distances.get_mut(n_dest).unwrap();
                 if cost < node_dest_distance.best_cost {
                     node_dest_distance.best_cost = cost;
                     node_dest_distance.best_prev_edge = Some((n, *edge));

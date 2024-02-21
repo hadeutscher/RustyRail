@@ -471,11 +471,12 @@ impl RailroadData {
 
     fn parse_gtfs_date(date: &str) -> Result<NaiveDate, Box<dyn Error>> {
         let date_num: u32 = date.parse()?;
-        Ok(NaiveDate::from_ymd(
+        Ok(NaiveDate::from_ymd_opt(
             (date_num / 10000) as i32,
             (date_num % 10000) / 100,
             date_num % 100,
-        ))
+        )
+        .ok_or_else(|| HaError::GTFSError("date".to_owned()))?)
     }
 
     fn parse_gtfs_daymap(period: (NaiveDate, NaiveDate), daymap: [bool; 7]) -> Vec<NaiveDate> {
@@ -485,7 +486,7 @@ impl RailroadData {
             if daymap[date.weekday().num_days_from_sunday() as usize] {
                 result.push(date);
             }
-            date = date.succ();
+            date = date.succ_opt().unwrap();
         }
         result
     }

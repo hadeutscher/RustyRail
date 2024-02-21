@@ -26,12 +26,12 @@ fn graph_building(c: &mut Criterion) {
     )))
     .unwrap();
     let start_time = NaiveDateTime::new(
-        NaiveDate::from_ymd(2020, 9, 9),
-        NaiveTime::from_hms(10, 0, 0),
+        NaiveDate::from_ymd_opt(2020, 9, 9).unwrap(),
+        NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
     );
     let end_time = NaiveDateTime::new(
-        NaiveDate::from_ymd(2020, 9, 10),
-        NaiveTime::from_hms(10, 0, 0),
+        NaiveDate::from_ymd_opt(2020, 9, 10).unwrap(),
+        NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
     );
 
     // Use same value for start and end station to minimize the cost of Dijkstra's algorithm
@@ -51,8 +51,8 @@ fn graph_building(c: &mut Criterion) {
     });
 
     let end_time = NaiveDateTime::new(
-        NaiveDate::from_ymd(2020, 9, 19),
-        NaiveTime::from_hms(10, 0, 0),
+        NaiveDate::from_ymd_opt(2020, 9, 19).unwrap(),
+        NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
     );
 
     c.bench_function("10 day graph building", |b| {
@@ -75,12 +75,12 @@ fn graph_processing(c: &mut Criterion) {
     )))
     .unwrap();
     let start_time = NaiveDateTime::new(
-        NaiveDate::from_ymd(2020, 9, 9),
-        NaiveTime::from_hms(10, 0, 0),
+        NaiveDate::from_ymd_opt(2020, 9, 9).unwrap(),
+        NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
     );
     let end_time = NaiveDateTime::new(
-        NaiveDate::from_ymd(2020, 9, 10),
-        NaiveTime::from_hms(10, 0, 0),
+        NaiveDate::from_ymd_opt(2020, 9, 10).unwrap(),
+        NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
     );
 
     let start_station = data.station(37382).unwrap();
@@ -99,8 +99,8 @@ fn graph_processing(c: &mut Criterion) {
     });
 
     let end_time = NaiveDateTime::new(
-        NaiveDate::from_ymd(2020, 9, 19),
-        NaiveTime::from_hms(10, 0, 0),
+        NaiveDate::from_ymd_opt(2020, 9, 19).unwrap(),
+        NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
     );
 
     c.bench_function("10 day path finding", |b| {

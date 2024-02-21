@@ -173,13 +173,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                 NaiveDate::parse_from_str(date, "%d/%m/%Y")
                     .map_err(|_| HaError::UsageError("Failed to parse date".to_owned()))?
             } else {
-                chrono::Local::now().date().naive_local()
+                chrono::Local::now().date_naive()
             },
             if let Some(time) = matches.value_of("time") {
                 NaiveTime::parse_from_str(time, "%H:%M:%S")
                     .map_err(|_| HaError::UsageError("Failed to parse time".to_owned()))?
             } else {
-                NaiveTime::from_hms(0, 0, 0)
+                NaiveTime::from_hms_opt(0, 0, 0).unwrap()
             },
         );
         let n_days = matches

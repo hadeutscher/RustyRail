@@ -22,7 +22,7 @@ pub fn stations() -> Vec<Station> {
 }
 
 pub fn test_date() -> NaiveDate {
-    NaiveDate::from_ymd(2000, 01, 01)
+    NaiveDate::from_ymd_opt(2000, 01, 01).unwrap()
 }
 
 #[test]
@@ -59,7 +59,7 @@ fn train_stops() {
             StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
             StopSchedule::new(400, HaDuration::from_hms(11, 30, 00), None),
         ],
-        vec![test_date(), test_date().succ()],
+        vec![test_date(), test_date().succ_opt().unwrap()],
     ));
     let data = RailroadData::from_stations_trains(stations(), trains);
     let client = Client::tracked(rocket(data)).expect("valid rocket instance");
@@ -86,7 +86,7 @@ fn find_routes() {
             StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
             StopSchedule::new(400, HaDuration::from_hms(11, 30, 00), None),
         ],
-        vec![test_date(), test_date().succ()],
+        vec![test_date(), test_date().succ_opt().unwrap()],
     ));
     let data = RailroadData::from_stations_trains(stations(), trains);
     let client = Client::tracked(rocket(data)).expect("valid rocket instance");

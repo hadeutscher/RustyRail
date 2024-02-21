@@ -43,9 +43,9 @@ fn shortest_path() {
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_best_single_route(
         &data,
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(10, 00, 00).unwrap()),
         data.station(100).unwrap(),
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(12, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(12, 00, 00).unwrap()),
         data.station(300).unwrap(),
     )
     .unwrap();
@@ -60,9 +60,9 @@ fn shortest_path() {
 
     let route = harail::get_latest_good_single_route(
         &data,
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(10, 00, 00).unwrap()),
         data.station(100).unwrap(),
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(12, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(12, 00, 00).unwrap()),
         data.station(300).unwrap(),
     )
     .unwrap();
@@ -112,9 +112,9 @@ fn minimize_switches() {
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_best_single_route(
         &data,
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(10, 00, 00).unwrap()),
         data.station(100).unwrap(),
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(13, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(13, 00, 00).unwrap()),
         data.station(600).unwrap(),
     )
     .unwrap();
@@ -126,9 +126,9 @@ fn minimize_switches() {
 
     let route = harail::get_latest_good_single_route(
         &data,
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(10, 00, 00).unwrap()),
         data.station(100).unwrap(),
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(13, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(13, 00, 00).unwrap()),
         data.station(600).unwrap(),
     )
     .unwrap();
@@ -164,9 +164,9 @@ fn minimize_switches2() {
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_best_single_route(
         &data,
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(10, 00, 00).unwrap()),
         data.station(100).unwrap(),
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(12, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(12, 00, 00).unwrap()),
         data.station(400).unwrap(),
     )
     .unwrap();
@@ -178,9 +178,9 @@ fn minimize_switches2() {
 
     let route = harail::get_latest_good_single_route(
         &data,
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(10, 00, 00).unwrap()),
         data.station(100).unwrap(),
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(12, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(12, 00, 00).unwrap()),
         data.station(400).unwrap(),
     )
     .unwrap();
@@ -220,9 +220,9 @@ fn wait_on_train() {
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_best_single_route(
         &data,
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(10, 00, 00).unwrap()),
         data.station(100).unwrap(),
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(12, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(12, 00, 00).unwrap()),
         data.station(300).unwrap(),
     )
     .unwrap();
@@ -234,9 +234,9 @@ fn wait_on_train() {
 
     let route = harail::get_latest_good_single_route(
         &data,
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(10, 00, 00).unwrap()),
         data.station(100).unwrap(),
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(12, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(12, 00, 00).unwrap()),
         data.station(300).unwrap(),
     )
     .unwrap();
@@ -287,9 +287,9 @@ fn wait_on_train_alt_route() {
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_latest_good_single_route(
         &data,
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(10, 00, 00).unwrap()),
         data.station(100).unwrap(),
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(12, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(12, 00, 00).unwrap()),
         data.station(300).unwrap(),
     )
     .unwrap();
@@ -327,9 +327,9 @@ fn multiple_routes() {
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let routes = harail::get_multiple_routes(
         &data,
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(10, 00, 00).unwrap()),
         data.station(100).unwrap(),
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(12, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(12, 00, 00).unwrap()),
         data.station(300).unwrap(),
     );
     assert_eq!(2, routes.len());
@@ -372,9 +372,9 @@ fn wait_on_train_multiple_routes() {
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let routes = harail::get_multiple_routes(
         &data,
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(10, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(10, 00, 00).unwrap()),
         data.station(100).unwrap(),
-        NaiveDateTime::new(test_date(), NaiveTime::from_hms(12, 00, 00)),
+        NaiveDateTime::new(test_date(), NaiveTime::from_hms_opt(12, 00, 00).unwrap()),
         data.station(300).unwrap(),
     );
     assert_eq!(2, routes.len());
