@@ -13,33 +13,34 @@ use test_data::test_date;
 #[test]
 fn shortest_path() {
     // Basic shortest-path test, expected result is to ride train 2 from 100 to 400 and then go back to 300 using train 3
-    let mut trains = Vec::new();
-    trains.push(Train::from_stops_date(
-        "1",
-        vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
-            StopSchedule::new(200, HaDuration::from_hms(10, 30, 00), None),
-            StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
-            StopSchedule::new(400, HaDuration::from_hms(11, 30, 00), None),
-        ],
-        test_date(),
-    ));
-    trains.push(Train::from_stops_date(
-        "2",
-        vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
-            StopSchedule::new(400, HaDuration::from_hms(10, 30, 00), None),
-        ],
-        test_date(),
-    ));
-    trains.push(Train::from_stops_date(
-        "3",
-        vec![
-            StopSchedule::new(400, HaDuration::from_hms(10, 30, 00), None),
-            StopSchedule::new(300, HaDuration::from_hms(10, 40, 00), None),
-        ],
-        test_date(),
-    ));
+    let trains = vec![
+        Train::from_stops_date(
+            "1",
+            vec![
+                StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
+                StopSchedule::new(200, HaDuration::from_hms(10, 30, 00), None),
+                StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
+                StopSchedule::new(400, HaDuration::from_hms(11, 30, 00), None),
+            ],
+            test_date(),
+        ),
+        Train::from_stops_date(
+            "2",
+            vec![
+                StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
+                StopSchedule::new(400, HaDuration::from_hms(10, 30, 00), None),
+            ],
+            test_date(),
+        ),
+        Train::from_stops_date(
+            "3",
+            vec![
+                StopSchedule::new(400, HaDuration::from_hms(10, 30, 00), None),
+                StopSchedule::new(300, HaDuration::from_hms(10, 40, 00), None),
+            ],
+            test_date(),
+        ),
+    ];
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_best_single_route(
         &data,
@@ -80,35 +81,36 @@ fn shortest_path() {
 fn minimize_switches() {
     // Tests basic train switch cost logic. Expected result is to ride train 1 all the way to station 600,
     // even though some of the route appears to be faster if we switch train.
-    let mut trains = Vec::new();
-    trains.push(Train::from_stops_date(
-        "1",
-        vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
-            StopSchedule::new(200, HaDuration::from_hms(10, 30, 00), None),
-            StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
-            StopSchedule::new(400, HaDuration::from_hms(11, 30, 00), None),
-            StopSchedule::new(500, HaDuration::from_hms(12, 00, 00), None),
-            StopSchedule::new(600, HaDuration::from_hms(12, 30, 00), None),
-        ],
-        test_date(),
-    ));
-    trains.push(Train::from_stops_date(
-        "2",
-        vec![
-            StopSchedule::new(200, HaDuration::from_hms(10, 31, 00), None),
-            StopSchedule::new(400, HaDuration::from_hms(10, 32, 00), None),
-        ],
-        test_date(),
-    ));
-    trains.push(Train::from_stops_date(
-        "3",
-        vec![
-            StopSchedule::new(500, HaDuration::from_hms(12, 01, 00), None),
-            StopSchedule::new(600, HaDuration::from_hms(12, 30, 00), None),
-        ],
-        test_date(),
-    ));
+    let trains = vec![
+        Train::from_stops_date(
+            "1",
+            vec![
+                StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
+                StopSchedule::new(200, HaDuration::from_hms(10, 30, 00), None),
+                StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
+                StopSchedule::new(400, HaDuration::from_hms(11, 30, 00), None),
+                StopSchedule::new(500, HaDuration::from_hms(12, 00, 00), None),
+                StopSchedule::new(600, HaDuration::from_hms(12, 30, 00), None),
+            ],
+            test_date(),
+        ),
+        Train::from_stops_date(
+            "2",
+            vec![
+                StopSchedule::new(200, HaDuration::from_hms(10, 31, 00), None),
+                StopSchedule::new(400, HaDuration::from_hms(10, 32, 00), None),
+            ],
+            test_date(),
+        ),
+        Train::from_stops_date(
+            "3",
+            vec![
+                StopSchedule::new(500, HaDuration::from_hms(12, 1, 00), None),
+                StopSchedule::new(600, HaDuration::from_hms(12, 30, 00), None),
+            ],
+            test_date(),
+        ),
+    ];
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_best_single_route(
         &data,
@@ -142,25 +144,26 @@ fn minimize_switches() {
 #[test]
 fn minimize_switches2() {
     // Test train switch minimization in a more complicated case. Expected result is to only use train 1.
-    let mut trains = Vec::new();
-    trains.push(Train::from_stops_date(
-        "1",
-        vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 01, 00), None),
-            StopSchedule::new(200, HaDuration::from_hms(10, 30, 00), None),
-            StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
-            StopSchedule::new(400, HaDuration::from_hms(11, 30, 00), None),
-        ],
-        test_date(),
-    ));
-    trains.push(Train::from_stops_date(
-        "2",
-        vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
-            StopSchedule::new(300, HaDuration::from_hms(10, 30, 00), None),
-        ],
-        test_date(),
-    ));
+    let trains = vec![
+        Train::from_stops_date(
+            "1",
+            vec![
+                StopSchedule::new(100, HaDuration::from_hms(10, 1, 00), None),
+                StopSchedule::new(200, HaDuration::from_hms(10, 30, 00), None),
+                StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
+                StopSchedule::new(400, HaDuration::from_hms(11, 30, 00), None),
+            ],
+            test_date(),
+        ),
+        Train::from_stops_date(
+            "2",
+            vec![
+                StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
+                StopSchedule::new(300, HaDuration::from_hms(10, 30, 00), None),
+            ],
+            test_date(),
+        ),
+    ];
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_best_single_route(
         &data,
@@ -195,28 +198,29 @@ fn minimize_switches2() {
 fn wait_on_train() {
     // Test trains with WAIT_ON_TRAIN
     // expected result is to use train 1 only in train switching mode, train 2 then 1 in delayed leaving
-    let mut trains = Vec::new();
-    trains.push(Train::from_stops_date(
-        "1",
-        vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
-            StopSchedule::new(
-                200,
-                HaDuration::from_hms(10, 20, 00),
-                Some(HaDuration::from_hms(10, 30, 00)),
-            ),
-            StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
-        ],
-        test_date(),
-    ));
-    trains.push(Train::from_stops_date(
-        "2",
-        vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 10, 00), None),
-            StopSchedule::new(200, HaDuration::from_hms(10, 20, 00), None),
-        ],
-        test_date(),
-    ));
+    let trains = vec![
+        Train::from_stops_date(
+            "1",
+            vec![
+                StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
+                StopSchedule::new(
+                    200,
+                    HaDuration::from_hms(10, 20, 00),
+                    Some(HaDuration::from_hms(10, 30, 00)),
+                ),
+                StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
+            ],
+            test_date(),
+        ),
+        Train::from_stops_date(
+            "2",
+            vec![
+                StopSchedule::new(100, HaDuration::from_hms(10, 10, 00), None),
+                StopSchedule::new(200, HaDuration::from_hms(10, 20, 00), None),
+            ],
+            test_date(),
+        ),
+    ];
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_best_single_route(
         &data,
@@ -254,36 +258,37 @@ fn wait_on_train() {
 fn wait_on_train_alt_route() {
     // Test trains with WAIT_ON_TRAIN and alt-route finding
     // expected result is to use train 2 and then switch to 3
-    let mut trains = Vec::new();
-    trains.push(Train::from_stops_date(
-        "1",
-        vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
-            StopSchedule::new(
-                200,
-                HaDuration::from_hms(10, 20, 00),
-                Some(HaDuration::from_hms(10, 30, 00)),
-            ),
-            StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
-        ],
-        test_date(),
-    ));
-    trains.push(Train::from_stops_date(
-        "2",
-        vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 10, 00), None),
-            StopSchedule::new(200, HaDuration::from_hms(10, 20, 00), None),
-        ],
-        test_date(),
-    ));
-    trains.push(Train::from_stops_date(
-        "3",
-        vec![
-            StopSchedule::new(200, HaDuration::from_hms(10, 30, 00), None),
-            StopSchedule::new(300, HaDuration::from_hms(10, 40, 00), None),
-        ],
-        test_date(),
-    ));
+    let trains = vec![
+        Train::from_stops_date(
+            "1",
+            vec![
+                StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
+                StopSchedule::new(
+                    200,
+                    HaDuration::from_hms(10, 20, 00),
+                    Some(HaDuration::from_hms(10, 30, 00)),
+                ),
+                StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
+            ],
+            test_date(),
+        ),
+        Train::from_stops_date(
+            "2",
+            vec![
+                StopSchedule::new(100, HaDuration::from_hms(10, 10, 00), None),
+                StopSchedule::new(200, HaDuration::from_hms(10, 20, 00), None),
+            ],
+            test_date(),
+        ),
+        Train::from_stops_date(
+            "3",
+            vec![
+                StopSchedule::new(200, HaDuration::from_hms(10, 30, 00), None),
+                StopSchedule::new(300, HaDuration::from_hms(10, 40, 00), None),
+            ],
+            test_date(),
+        ),
+    ];
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_latest_good_single_route(
         &data,
@@ -305,25 +310,26 @@ fn wait_on_train_alt_route() {
 
 #[test]
 fn multiple_routes() {
-    let mut trains = Vec::new();
-    trains.push(Train::from_stops_date(
-        "1",
-        vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
-            StopSchedule::new(200, HaDuration::from_hms(10, 30, 00), None),
-            StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
-        ],
-        test_date(),
-    ));
-    trains.push(Train::from_stops_date(
-        "2",
-        vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 30, 00), None),
-            StopSchedule::new(200, HaDuration::from_hms(11, 00, 00), None),
-            StopSchedule::new(300, HaDuration::from_hms(11, 30, 00), None),
-        ],
-        test_date(),
-    ));
+    let trains = vec![
+        Train::from_stops_date(
+            "1",
+            vec![
+                StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
+                StopSchedule::new(200, HaDuration::from_hms(10, 30, 00), None),
+                StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
+            ],
+            test_date(),
+        ),
+        Train::from_stops_date(
+            "2",
+            vec![
+                StopSchedule::new(100, HaDuration::from_hms(10, 30, 00), None),
+                StopSchedule::new(200, HaDuration::from_hms(11, 00, 00), None),
+                StopSchedule::new(300, HaDuration::from_hms(11, 30, 00), None),
+            ],
+            test_date(),
+        ),
+    ];
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let routes = harail::get_multiple_routes(
         &data,
@@ -347,28 +353,29 @@ fn multiple_routes() {
 
 #[test]
 fn wait_on_train_multiple_routes() {
-    let mut trains = Vec::new();
-    trains.push(Train::from_stops_date(
-        "1",
-        vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
-            StopSchedule::new(
-                200,
-                HaDuration::from_hms(10, 20, 00),
-                Some(HaDuration::from_hms(10, 30, 00)),
-            ),
-            StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
-        ],
-        test_date(),
-    ));
-    trains.push(Train::from_stops_date(
-        "2",
-        vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 10, 00), None),
-            StopSchedule::new(200, HaDuration::from_hms(10, 20, 00), None),
-        ],
-        test_date(),
-    ));
+    let trains = vec![
+        Train::from_stops_date(
+            "1",
+            vec![
+                StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
+                StopSchedule::new(
+                    200,
+                    HaDuration::from_hms(10, 20, 00),
+                    Some(HaDuration::from_hms(10, 30, 00)),
+                ),
+                StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
+            ],
+            test_date(),
+        ),
+        Train::from_stops_date(
+            "2",
+            vec![
+                StopSchedule::new(100, HaDuration::from_hms(10, 10, 00), None),
+                StopSchedule::new(200, HaDuration::from_hms(10, 20, 00), None),
+            ],
+            test_date(),
+        ),
+    ];
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let routes = harail::get_multiple_routes(
         &data,

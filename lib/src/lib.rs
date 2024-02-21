@@ -329,6 +329,12 @@ impl<'a> Route<'a> {
     }
 }
 
+impl<'a> Default for Route<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> fmt::Display for Route<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for part in self.parts.iter() {
@@ -472,7 +478,7 @@ pub fn get_multiple_routes<'a>(
         g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none());
     while let Some(path) = path_opt {
         let route = build_route(path);
-        if route.parts.len() == 0 {
+        if route.parts.is_empty() {
             result.push(route);
             break;
         }

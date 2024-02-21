@@ -11,8 +11,7 @@ use test_data::test_date;
 
 #[test]
 fn graph_time_cutoff() {
-    let mut trains = Vec::new();
-    trains.push(Train::from_stops_dates(
+    let trains = vec![Train::from_stops_dates(
         "1",
         vec![
             StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
@@ -21,7 +20,7 @@ fn graph_time_cutoff() {
             StopSchedule::new(400, HaDuration::from_hms(11, 30, 00), None),
         ],
         vec![test_date(), test_date().succ_opt().unwrap()],
-    ));
+    )];
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let route = harail::get_best_single_route(
         &data,

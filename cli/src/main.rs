@@ -125,7 +125,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let reader = BufReader::new(file);
     let data: RailroadData = deserialize_from(reader)
         .map_err(|_| HaError::UsageError("Could not deserialize database".to_owned()))?;
-    if let Some(_) = matches.subcommand_matches("list-stations") {
+    if matches.subcommand_matches("list-stations").is_some() {
         let mut stations: Vec<_> = data.stations().collect();
         stations.sort_by_key(|s| s.id());
         if matches.contains_id("json") {
@@ -137,7 +137,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    if let Some(_) = matches.subcommand_matches("list-trains") {
+    if matches.subcommand_matches("list-trains").is_some() {
         let mut trains: Vec<_> = data.trains().collect();
         trains.sort_by_key(|t| t.id());
         trains.into_iter().for_each(|t| {
@@ -153,7 +153,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    if let Some(_) = matches.subcommand_matches("date-info") {
+    if matches.subcommand_matches("date-info").is_some() {
         let db_start = data
             .start_date()
             .ok_or_else(|| HaError::UsageError("Empty database".to_owned()))?;
@@ -220,7 +220,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    return Err(Box::new(HaError::UsageError(
+    Err(Box::new(HaError::UsageError(
         "No operation specified".to_owned(),
-    )));
+    )))
 }

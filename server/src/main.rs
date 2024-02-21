@@ -4,6 +4,9 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+// Required until this issue is fixed https://github.com/rwf2/Rocket/issues/2655
+#![allow(clippy::blocks_in_conditions)]
+
 #[macro_use]
 extern crate rocket;
 
@@ -46,7 +49,7 @@ fn get_train(data: &State<RailroadData>, id: String, date: HaDate) -> Option<Raw
     let json = JsonValue::Array(
         train
             .stops()
-            .map(|s| Stop::from_stop_schedule(&data, s, date.0).to_json())
+            .map(|s| Stop::from_stop_schedule(data, s, date.0).to_json())
             .collect(),
     );
     Some(RawJson(json.dump()))
@@ -95,13 +98,13 @@ fn find_route(
     let end_time = options.end_time.0;
     Ok(RawJson(match options.search {
         SearchType::Best => {
-            harail::get_best_single_route(&data, start_time, start_station, end_time, end_station)
+            harail::get_best_single_route(data, start_time, start_station, end_time, end_station)
                 .ok_or_else(|| status::NotFound(String::from("no possible route found")))?
                 .to_json()
                 .dump()
         }
         SearchType::Latest => harail::get_latest_good_single_route(
-            &data,
+            data,
             start_time,
             start_station,
             end_time,
@@ -111,7 +114,7 @@ fn find_route(
         .to_json()
         .dump(),
         SearchType::Multi => JsonValue::Array(
-            harail::get_multiple_routes(&data, start_time, start_station, end_time, end_station)
+            harail::get_multiple_routes(data, start_time, start_station, end_time, end_station)
                 .into_iter()
                 .map(|r| r.to_json())
                 .collect(),
