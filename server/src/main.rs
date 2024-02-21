@@ -9,7 +9,7 @@ extern crate rocket;
 
 use bincode::deserialize_from;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use harail::{RailroadData, StationId, Stop, JSON};
 use json::JsonValue;
 use rocket::form::{self, FromFormField, ValueField};
@@ -128,19 +128,19 @@ fn rocket(data: RailroadData) -> rocket::Rocket<rocket::Build> {
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
-    let matches = App::new("HaRail Server")
+    let matches = Command::new("HaRail Server")
         .version("0.1")
         .author("Yuval Deutscher")
         .about("Because the Israel Railways app sucks™ (server edition)")
         .arg(
-            Arg::with_name("DATABASE")
+            Arg::new("DATABASE")
                 .help("The HaRail database to use")
                 .required(true)
                 .index(1),
         )
         .get_matches();
 
-    let path = Path::new(matches.value_of("DATABASE").unwrap());
+    let path = Path::new(matches.get_one::<String>("DATABASE").unwrap());
     let file = File::open(path).unwrap();
     let reader = BufReader::new(file);
     let data: RailroadData = deserialize_from(reader).unwrap();
