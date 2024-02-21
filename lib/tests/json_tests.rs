@@ -18,15 +18,14 @@ fn stations_save() {
 
 #[test]
 fn route_save() {
-    let mut trains = Vec::new();
-    trains.push(Train::from_stops_date(
+    let trains = vec![Train::from_stops_date(
         "1",
         vec![
             StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
             StopSchedule::new(200, HaDuration::from_hms(10, 30, 00), None),
         ],
         test_date(),
-    ));
+    )];
     let data = RailroadData::from_stations_trains(test_data::stations(), trains);
     let train = data.train("1").unwrap();
     let stops = train

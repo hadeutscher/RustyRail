@@ -12,6 +12,7 @@ use chrono::{Datelike, Duration, NaiveDate};
 use json::JsonValue;
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt;
@@ -312,6 +313,8 @@ pub struct RailroadData {
     trains: HashMap<TrainId, Train>,
 }
 
+type TripsResult = HashMap<String, Option<Vec<NaiveDate>>>;
+
 impl RailroadData {
     /// Create a new RailroadData object
     pub fn new() -> Self {
@@ -364,12 +367,7 @@ impl RailroadData {
     /// assert_eq!(100, station.id());
     /// ```
     pub fn find_station(&self, name: &str) -> Option<&Station> {
-        for station in self.stations.values() {
-            if station.name == name {
-                return Some(station);
-            }
-        }
-        None
+        self.stations.values().find(|&station| station.name == name)
     }
 
     /// Gets the start date of the database
@@ -411,7 +409,7 @@ impl RailroadData {
         let (agency_id, agency_name) = headers!(reader.headers()?, agency_id, agency_name);
         for result in reader.records() {
             let record = result?;
-            let agency_name = record.get(agency_name).ok_or_else(|| "agency_name")?;
+            let agency_name = record.get(agency_name).ok_or("agency_name")?;
             if agency_name == "רכבת ישראל" {
                 let agency_id: u64 = record
                     .get(agency_id)
@@ -471,11 +469,12 @@ impl RailroadData {
 
     fn parse_gtfs_date(date: &str) -> Result<NaiveDate, Box<dyn Error>> {
         let date_num: u32 = date.parse()?;
-        Ok(NaiveDate::from_ymd(
+        Ok(NaiveDate::from_ymd_opt(
             (date_num / 10000) as i32,
             (date_num % 10000) / 100,
             date_num % 100,
-        ))
+        )
+        .ok_or_else(|| HaError::GTFSError("date".to_owned()))?)
     }
 
     fn parse_gtfs_daymap(period: (NaiveDate, NaiveDate), daymap: [bool; 7]) -> Vec<NaiveDate> {
@@ -485,7 +484,7 @@ impl RailroadData {
             if daymap[date.weekday().num_days_from_sunday() as usize] {
                 result.push(date);
             }
-            date = date.succ();
+            date = date.succ_opt().unwrap();
         }
         result
     }
@@ -554,7 +553,7 @@ impl RailroadData {
         reader: R,
         irw_routes: HashSet<u64>,
         services: HashMap<u64, Vec<NaiveDate>>,
-    ) -> Result<HashMap<String, Option<Vec<NaiveDate>>>, Box<dyn Error>> {
+    ) -> Result<TripsResult, Box<dyn Error>> {
         let mut reader = csv::Reader::from_reader(reader);
         let (route_id, trip_id, service_id) =
             headers!(reader.headers()?, route_id, trip_id, service_id);
@@ -583,9 +582,8 @@ impl RailroadData {
     }
 
     fn parse_gtfs_time(time_str: &str) -> Result<HaDuration, Box<dyn Error>> {
-        let mut state = 0;
         let (mut h, mut m, mut s): (u32, u32, u32) = (0, 0, 0);
-        for part in time_str.split(":") {
+        for (state, part) in time_str.split(':').enumerate() {
             match state {
                 0 => h = part.parse()?,
                 1 => m = part.parse()?,
@@ -596,7 +594,6 @@ impl RailroadData {
                     )))
                 }
             };
-            state += 1;
         }
         Ok(HaDuration::from_hms(h, m, s))
     }
@@ -663,13 +660,13 @@ impl RailroadData {
                 );
             }
             let train = proto_trains.get_mut(trip_id).unwrap();
-            if train.stops.len() > stop_seq_index {
-                train.stops[stop_seq_index] = Some(stop);
-            } else if train.stops.len() < stop_seq_index {
-                train.stops.resize_with(stop_seq_index + 1, || None);
-                train.stops[stop_seq_index] = Some(stop);
-            } else {
-                train.stops.push(Some(stop));
+            match train.stops.len().cmp(&stop_seq_index) {
+                Ordering::Greater => train.stops[stop_seq_index] = Some(stop),
+                Ordering::Less => {
+                    train.stops.resize_with(stop_seq_index + 1, || None);
+                    train.stops[stop_seq_index] = Some(stop);
+                }
+                Ordering::Equal => train.stops.push(Some(stop)),
             }
             stations.insert(stop_id);
         }
@@ -714,5 +711,11 @@ impl RailroadData {
         let zip = ZipArchive::new(reader)?;
         let opener = opener::ZipFileOpener::new(zip);
         Self::load_gtfs(opener)
+    }
+}
+
+impl Default for RailroadData {
+    fn default() -> Self {
+        Self::new()
     }
 }

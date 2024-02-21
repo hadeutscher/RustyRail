@@ -20,5 +20,5 @@ pub fn stations() -> Vec<Station> {
 }
 
 pub fn test_date() -> NaiveDate {
-    NaiveDate::from_ymd(2000, 01, 01)
+    NaiveDate::from_ymd_opt(2000, 1, 1).unwrap()
 }

@@ -22,7 +22,7 @@ pub fn stations() -> Vec<Station> {
 }
 
 pub fn test_date() -> NaiveDate {
-    NaiveDate::from_ymd(2000, 01, 01)
+    NaiveDate::from_ymd_opt(2000, 1, 1).unwrap()
 }
 
 #[test]
@@ -39,8 +39,7 @@ fn stations_list() {
         assert_eq!(
             stations()
                 .into_iter()
-                .filter(|x| x.id() == id)
-                .next()
+                .find(|x| x.id() == id)
                 .unwrap()
                 .name(),
             name
@@ -50,8 +49,7 @@ fn stations_list() {
 
 #[test]
 fn train_stops() {
-    let mut trains = Vec::new();
-    trains.push(Train::from_stops_dates(
+    let trains = vec![Train::from_stops_dates(
         "1",
         vec![
             StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
@@ -59,8 +57,8 @@ fn train_stops() {
             StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
             StopSchedule::new(400, HaDuration::from_hms(11, 30, 00), None),
         ],
-        vec![test_date(), test_date().succ()],
-    ));
+        vec![test_date(), test_date().succ_opt().unwrap()],
+    )];
     let data = RailroadData::from_stations_trains(stations(), trains);
     let client = Client::tracked(rocket(data)).expect("valid rocket instance");
     let response = client
@@ -77,8 +75,7 @@ fn train_stops() {
 
 #[test]
 fn find_routes() {
-    let mut trains = Vec::new();
-    trains.push(Train::from_stops_dates(
+    let trains = vec![Train::from_stops_dates(
         "1",
         vec![
             StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
@@ -86,8 +83,8 @@ fn find_routes() {
             StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
             StopSchedule::new(400, HaDuration::from_hms(11, 30, 00), None),
         ],
-        vec![test_date(), test_date().succ()],
-    ));
+        vec![test_date(), test_date().succ_opt().unwrap()],
+    )];
     let data = RailroadData::from_stations_trains(stations(), trains);
     let client = Client::tracked(rocket(data)).expect("valid rocket instance");
     let response = client

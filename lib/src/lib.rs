@@ -36,8 +36,8 @@ pub struct Stop<'a> {
 
 impl<'a> JSON for Stop<'a> {
     fn to_json(&self) -> JsonValue {
-        let arrival = DateTime::<Utc>::from_utc(self.arrival(), Utc);
-        let departure = DateTime::<Utc>::from_utc(self.departure(), Utc);
+        let arrival = DateTime::<Utc>::from_naive_utc_and_offset(self.arrival(), Utc);
+        let departure = DateTime::<Utc>::from_naive_utc_and_offset(self.departure(), Utc);
         object! {
             station: self.station.id().to_owned(),
             arrival: arrival.to_rfc3339(),
@@ -48,7 +48,7 @@ impl<'a> JSON for Stop<'a> {
 
 impl<'a> Stop<'a> {
     fn inflate_stop_time(date: NaiveDate, offset: HaDuration) -> NaiveDateTime {
-        NaiveDateTime::new(date, NaiveTime::from_hms(0, 0, 0)) + offset.to_chrono()
+        NaiveDateTime::new(date, NaiveTime::from_hms_opt(0, 0, 0).unwrap()) + offset.to_chrono()
     }
 
     /// Construct a Stop object from a StopSchedule and a specific date
@@ -118,8 +118,8 @@ impl<'a> RailroadGraph<'a> {
         let mut result = Self::new();
         let mut stations_general: HashMap<&Station, HashSet<Singularity>> = HashMap::new();
         let first_possible_date = start_time.date();
-        let last_possible_date = if end_time.time() == NaiveTime::from_hms(0, 0, 0) {
-            end_time.date().pred()
+        let last_possible_date = if end_time.time() == NaiveTime::from_hms_opt(0, 0, 0).unwrap() {
+            end_time.date().pred_opt().unwrap()
         } else {
             end_time.date()
         };
@@ -295,8 +295,8 @@ impl<'a> fmt::Display for RoutePart<'a> {
 
 impl<'a> JSON for RoutePart<'a> {
     fn to_json(&self) -> JsonValue {
-        let departure = DateTime::<Utc>::from_utc(self.start.departure(), Utc);
-        let arrival = DateTime::<Utc>::from_utc(self.end.arrival(), Utc);
+        let departure = DateTime::<Utc>::from_naive_utc_and_offset(self.start.departure(), Utc);
+        let arrival = DateTime::<Utc>::from_naive_utc_and_offset(self.end.arrival(), Utc);
         object! {
             train: self.train.id().to_owned(),
             start_time: departure.to_rfc3339(),
@@ -326,6 +326,12 @@ impl<'a> Route<'a> {
     /// Iterate over the parts of the route. Each RoutePart corresponds to a single train ride.
     pub fn parts(&self) -> impl Iterator<Item = &RoutePart> {
         self.parts.iter()
+    }
+}
+
+impl<'a> Default for Route<'a> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -472,7 +478,7 @@ pub fn get_multiple_routes<'a>(
         g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none());
     while let Some(path) = path_opt {
         let route = build_route(path);
-        if route.parts.len() == 0 {
+        if route.parts.is_empty() {
             result.push(route);
             break;
         }
