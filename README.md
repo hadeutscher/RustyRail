@@ -15,7 +15,7 @@ Public transport fastest-route finder for Israel Railways (Rust rewrite)
 ./harail_cli ~/harail.db list-stations
 ```
 
-If not present, obtain Israel's public transportation database from ftp://gtfs.mot.gov.il/israel-public-transportation.zip
+If not present, obtain Israel's public transportation database from https://gtfs.mot.gov.il/gtfsfiles/israel-public-transportation.zip
 
 Refer to `./harail_cli -h` for more options.
 
