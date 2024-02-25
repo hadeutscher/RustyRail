@@ -16,6 +16,7 @@ use clap::{Arg, Command};
 use harail::{RailroadData, StationId, Stop, JSON};
 use json::JsonValue;
 use rocket::form::{self, FromFormField, ValueField};
+use rocket::fs::NamedFile;
 use rocket::http::RawStr;
 use rocket::request::FromParam;
 use rocket::response::content::RawJson;
@@ -123,9 +124,26 @@ fn find_route(
     }))
 }
 
+#[get("/")]
+async fn index() -> Result<NamedFile, status::NotFound<String>> {
+    let page_directory_path = format!("{}/../ui/harail/build", env!("CARGO_MANIFEST_DIR"));
+    NamedFile::open(Path::new(&page_directory_path).join("index.html"))
+        .await
+        .map_err(|e| status::NotFound(e.to_string()))
+}
+
+#[get("/<file..>")]
+async fn files(file: std::path::PathBuf) -> Result<NamedFile, status::NotFound<String>> {
+    let page_directory_path = format!("{}/../ui/harail/build", env!("CARGO_MANIFEST_DIR"));
+    NamedFile::open(Path::new(&page_directory_path).join(file))
+        .await
+        .map_err(|e| status::NotFound(e.to_string()))
+}
+
 fn rocket(data: RailroadData) -> rocket::Rocket<rocket::Build> {
     rocket::build()
         .manage(data)
+        .mount("/", routes![index, files])
         .mount("/harail", routes![list_stations, get_train, find_route])
 }
 
