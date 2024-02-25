@@ -16,11 +16,13 @@ use clap::{Arg, Command};
 use harail::{RailroadData, StationId, Stop, JSON};
 use jzon::JsonValue;
 use rocket::form::{self, FromFormField, ValueField};
+use rocket::fs::FileServer;
 use rocket::http::RawStr;
 use rocket::request::FromParam;
 use rocket::response::content::RawJson;
 use rocket::response::status;
 use rocket::State;
+use std::path::PathBuf;
 use std::{fs::File, io::BufReader, path::Path};
 
 #[cfg(test)]
@@ -123,10 +125,14 @@ fn find_route(
     }))
 }
 
-fn rocket(data: RailroadData) -> rocket::Rocket<rocket::Build> {
-    rocket::build()
+fn rocket(data: RailroadData, static_path: Option<&Path>) -> rocket::Rocket<rocket::Build> {
+    let rocket = rocket::build()
         .manage(data)
-        .mount("/harail", routes![list_stations, get_train, find_route])
+        .mount("/harail", routes![list_stations, get_train, find_route]);
+    match static_path {
+        Some(path) => rocket.mount("/", FileServer::from(path)),
+        None => rocket,
+    }
 }
 
 #[rocket::main]
@@ -141,13 +147,24 @@ async fn main() -> Result<(), rocket::Error> {
                 .required(true)
                 .index(1),
         )
+        .arg(
+            Arg::new("static")
+                .short('s')
+                .long("static")
+                .value_name("STATIC")
+                .help("Path to static assets (optional)"),
+        )
         .get_matches();
 
+    let static_path = matches.get_one::<String>("static").map(PathBuf::from);
     let path = Path::new(matches.get_one::<String>("DATABASE").unwrap());
     let file = File::open(path).unwrap();
     let reader = BufReader::new(file);
     let data: RailroadData = deserialize_from(reader).unwrap();
-
-    rocket(data).ignite().await?.launch().await?;
+    rocket(data, static_path.as_deref())
+        .ignite()
+        .await?
+        .launch()
+        .await?;
     Ok(())
 }

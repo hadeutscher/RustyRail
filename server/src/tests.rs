@@ -28,7 +28,7 @@ pub fn test_date() -> NaiveDate {
 #[test]
 fn stations_list() {
     let data = RailroadData::from_stations_trains(stations(), vec![]);
-    let client = Client::tracked(rocket(data)).expect("valid rocket instance");
+    let client = Client::tracked(rocket(data, None)).expect("valid rocket instance");
     let response = client.get("/harail/stations").dispatch();
     assert_eq!(response.status(), Status::Ok);
     let json = jzon::parse(&response.into_string().unwrap()).unwrap();
@@ -60,7 +60,7 @@ fn train_stops() {
         vec![test_date(), test_date().succ_opt().unwrap()],
     )];
     let data = RailroadData::from_stations_trains(stations(), trains);
-    let client = Client::tracked(rocket(data)).expect("valid rocket instance");
+    let client = Client::tracked(rocket(data, None)).expect("valid rocket instance");
     let response = client
         .get("/harail/trains/1/stops/2000-01-01T00:00:00Z")
         .dispatch();
@@ -86,7 +86,7 @@ fn find_routes() {
         vec![test_date(), test_date().succ_opt().unwrap()],
     )];
     let data = RailroadData::from_stations_trains(stations(), trains);
-    let client = Client::tracked(rocket(data)).expect("valid rocket instance");
+    let client = Client::tracked(rocket(data, None)).expect("valid rocket instance");
     let response = client
         .get("/harail/routes/find?search=best&start_station=100&start_time=2000-01-01T00:00:00Z&end_station=400&end_time=2000-01-02T00:00:00Z")
         .dispatch();
