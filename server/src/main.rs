@@ -14,7 +14,7 @@ use bincode::deserialize_from;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use clap::{Arg, Command};
 use harail::{RailroadData, StationId, Stop, JSON};
-use json::JsonValue;
+use jzon::JsonValue;
 use rocket::form::{self, FromFormField, ValueField};
 use rocket::http::RawStr;
 use rocket::request::FromParam;

@@ -9,10 +9,10 @@ mod graph;
 mod gtfs;
 
 #[macro_use(object)]
-extern crate json;
+extern crate jzon;
 
 use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, NaiveTime, Utc};
-use json::JsonValue;
+use jzon::JsonValue;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 

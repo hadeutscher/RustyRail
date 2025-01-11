@@ -9,7 +9,7 @@ mod opener;
 use crate::HaError;
 use crate::JSON;
 use chrono::{Datelike, Duration, NaiveDate};
-use json::JsonValue;
+use jzon::JsonValue;
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;

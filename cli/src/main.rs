@@ -8,7 +8,7 @@ use bincode::{deserialize_from, serialize_into};
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use clap::{Arg, Command};
 use harail::{HaError, RailroadData, JSON};
-use json::JsonValue;
+use jzon::JsonValue;
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};

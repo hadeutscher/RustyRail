@@ -31,7 +31,7 @@ fn stations_list() {
     let client = Client::tracked(rocket(data)).expect("valid rocket instance");
     let response = client.get("/harail/stations").dispatch();
     assert_eq!(response.status(), Status::Ok);
-    let json = json::parse(&response.into_string().unwrap()).unwrap();
+    let json = jzon::parse(&response.into_string().unwrap()).unwrap();
     assert_eq!(json.len(), 6);
     for json in json.members() {
         let id = json["id"].as_u64().unwrap();

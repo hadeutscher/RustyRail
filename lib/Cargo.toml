@@ -14,7 +14,7 @@ edition = "2018"
 [dependencies]
 chrono = { version = "0.4.19", features = ["serde"] }
 csv = "1.1.6"
-json = "0.12.4"
+jzon = "0.12.4"
 priority-queue = "2.1.1"
 serde = { version = "1.0.130", features = ["derive"] }
 thiserror = "2.0.11"
