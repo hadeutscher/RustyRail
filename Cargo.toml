@@ -8,7 +8,7 @@ lto = "thin"
 
 [workspace]
 members = [
-  "lib/",
   "cli/",
+  "lib/",
   "server/",
 ]
