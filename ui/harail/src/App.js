@@ -21,7 +21,7 @@ const App = () => {
 
   return (
     <div className="App">
-      <h1>Train Route Finder</h1>
+      <h1>HaRail</h1>
       <RouteFinder stations={stations} />
     </div>
   );
