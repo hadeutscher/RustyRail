@@ -14,4 +14,6 @@ RUN cargo build --release --bin harail_server
 
 FROM debian:bookworm-slim
 COPY --from=builder /app/target/release/harail_server /usr/local/bin
+ENV ROCKET_ADDRESS=0.0.0.0
+ENV ROCKET_PORT=8080
 ENTRYPOINT ["harail_server"]
