@@ -34,7 +34,7 @@ pub struct Stop<'a> {
     departure: NaiveDateTime,
 }
 
-impl<'a> JSON for Stop<'a> {
+impl JSON for Stop<'_> {
     fn to_json(&self) -> JsonValue {
         let arrival = DateTime::<Utc>::from_naive_utc_and_offset(self.arrival(), Utc);
         let departure = DateTime::<Utc>::from_naive_utc_and_offset(self.departure(), Utc);
@@ -93,7 +93,7 @@ enum Action<'a> {
     Unboard,
 }
 
-impl<'a> graph::Weight for Action<'a> {
+impl graph::Weight for Action<'_> {
     fn weight(&self) -> i64 {
         match self {
             Action::Wait(time) => time.num_seconds(),
@@ -280,7 +280,7 @@ impl<'a> RoutePart<'a> {
     }
 }
 
-impl<'a> fmt::Display for RoutePart<'a> {
+impl fmt::Display for RoutePart<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -293,7 +293,7 @@ impl<'a> fmt::Display for RoutePart<'a> {
     }
 }
 
-impl<'a> JSON for RoutePart<'a> {
+impl JSON for RoutePart<'_> {
     fn to_json(&self) -> JsonValue {
         let departure = DateTime::<Utc>::from_naive_utc_and_offset(self.start.departure(), Utc);
         let arrival = DateTime::<Utc>::from_naive_utc_and_offset(self.end.arrival(), Utc);
@@ -329,13 +329,13 @@ impl<'a> Route<'a> {
     }
 }
 
-impl<'a> Default for Route<'a> {
+impl Default for Route<'_> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a> fmt::Display for Route<'a> {
+impl fmt::Display for Route<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for part in self.parts.iter() {
             writeln!(f, "{}", part)?;
@@ -344,7 +344,7 @@ impl<'a> fmt::Display for Route<'a> {
     }
 }
 
-impl<'a> JSON for Route<'a> {
+impl JSON for Route<'_> {
     fn to_json(&self) -> JsonValue {
         let mut result = JsonValue::new_array();
         for part in &self.parts {

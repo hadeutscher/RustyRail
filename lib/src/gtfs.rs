@@ -166,7 +166,7 @@ impl Serialize for HaDuration {
 
 struct HaDurationVisitor;
 
-impl<'de> Visitor<'de> for HaDurationVisitor {
+impl Visitor<'_> for HaDurationVisitor {
     type Value = HaDuration;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
