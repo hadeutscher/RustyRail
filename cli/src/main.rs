@@ -164,35 +164,35 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    if let Some(matches) = matches.subcommand_matches("find") {
+    if let Some(find_matches) = matches.subcommand_matches("find") {
         let start_time = NaiveDateTime::new(
-            if let Some(date) = matches.get_one::<String>("date") {
+            if let Some(date) = find_matches.get_one::<String>("date") {
                 NaiveDate::parse_from_str(date, "%d/%m/%Y")
                     .map_err(|_| HaError::UsageError("Failed to parse date".to_owned()))?
             } else {
                 chrono::Local::now().date_naive()
             },
-            if let Some(time) = matches.get_one::<String>("time") {
+            if let Some(time) = find_matches.get_one::<String>("time") {
                 NaiveTime::parse_from_str(time, "%H:%M:%S")
                     .map_err(|_| HaError::UsageError("Failed to parse time".to_owned()))?
             } else {
                 NaiveTime::from_hms_opt(0, 0, 0).unwrap()
             },
         );
-        let n_days = matches
+        let n_days = find_matches
             .get_one::<String>("length")
             .map_or_else(|| Ok(1), |x| x.parse())
             .map_err(|_| HaError::UsageError("Failed to parse length".to_owned()))?;
         let end_time = start_time + chrono::Duration::days(n_days);
         let start_station = data
-            .find_station(matches.get_one::<String>("START_STATION").unwrap())
+            .find_station(find_matches.get_one::<String>("START_STATION").unwrap())
             .ok_or_else(|| HaError::UsageError("Could not find source station".to_owned()))?;
         let end_station = data
-            .find_station(matches.get_one::<String>("DEST_STATION").unwrap())
+            .find_station(find_matches.get_one::<String>("DEST_STATION").unwrap())
             .ok_or_else(|| HaError::UsageError("Could not find dest station".to_owned()))?;
-        let routes = if matches.contains_id("multiple") {
+        let routes = if find_matches.contains_id("multiple") {
             harail::get_multiple_routes(&data, start_time, start_station, end_time, end_station)
-        } else if matches.contains_id("delayed") {
+        } else if find_matches.contains_id("delayed-leave") {
             vec![harail::get_latest_good_single_route(
                 &data,
                 start_time,
