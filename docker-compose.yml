@@ -1,8 +1,12 @@
-version: "3.7"
 services:
-
-  harail_server:
+  harail:
     build: .
     ports:
-      - "8000:8000"
+      - "8080:8080"
     restart: always
+    volumes:
+      - db-data:/db
+    command: /db/harail.db
+
+volumes:
+  db-data:

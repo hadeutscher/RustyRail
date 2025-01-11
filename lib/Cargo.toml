@@ -8,8 +8,7 @@ repository = "https://github.com/hadeutscher/RustyRail"
 readme = "../README.md"
 keywords = ["transportation"]
 exclude = ["fixtures/*"]
-edition = "2018"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+edition = "2021"
 
 [dependencies]
 chrono = { version = "0.4.19", features = ["serde"] }
