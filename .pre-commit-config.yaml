@@ -12,7 +12,7 @@ repos:
       - id: cargo-check
       - id: clippy
   - repo: https://github.com/DevinR528/cargo-sort
-    rev: v1.0.9
+    rev: v1.1.0
     hooks:
       - id: cargo-sort
         args: [--workspace]
