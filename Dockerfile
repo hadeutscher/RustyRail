@@ -1,8 +1,17 @@
-FROM rust:latest as builder
-WORKDIR /usr/src/myapp
-COPY . .
-RUN cd server && cargo install --path .
+FROM rust:1 as chef
+RUN cargo install --locked cargo-chef
+WORKDIR /app
 
-FROM debian:buster-slim
-COPY --from=builder /usr/local/cargo/bin/harail_server /usr/local/bin/harail_server
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY . .
+RUN cargo build --release --bin harail_server
+
+FROM debian:bookworm-slim
+COPY --from=builder /app/target/release/harail_server /usr/local/bin
 ENTRYPOINT ["harail_server"]

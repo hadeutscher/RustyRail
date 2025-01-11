@@ -26,7 +26,7 @@ impl<'p> PathFileOpener<'p> {
     }
 }
 
-impl<'p, 'a> FileOpener<'a> for PathFileOpener<'p> {
+impl<'a> FileOpener<'a> for PathFileOpener<'_> {
     type Read = File;
 
     fn open(&'a mut self, name: &str) -> Result<Self::Read, Box<dyn Error>> {
