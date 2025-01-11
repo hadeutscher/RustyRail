@@ -1,6 +1,11 @@
 [profile.dev]
 codegen-units = 4
 
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
 [workspace]
 members = [
   "lib/",
