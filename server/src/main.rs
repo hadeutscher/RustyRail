@@ -138,7 +138,7 @@ fn rocket(data: RailroadData, static_path: Option<&Path>) -> rocket::Rocket<rock
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
     let matches = Command::new("HaRail Server")
-        .version("1.0.1")
+        .version("1.0.2")
         .author("Yuval Deutscher")
         .about("Because the Israel Railways app sucks™ (server edition)")
         .arg(

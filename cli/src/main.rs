@@ -18,7 +18,7 @@ const JSON_SPACES: u16 = 4;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let matches = Command::new("HaRail")
-        .version("1.0.1")
+        .version("1.0.2")
         .author("Yuval Deutscher")
         .about("Because the Israel Railways app sucks™")
         .arg(
