@@ -1,5 +1,4 @@
-FROM rust:1 AS chef
-RUN cargo install --locked cargo-chef
+FROM lukemathwalker/cargo-chef:0.1.68-rust-1 AS chef
 WORKDIR /app
 
 FROM chef AS planner
