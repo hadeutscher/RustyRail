@@ -1,7 +1,7 @@
 // src/App.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import RouteFinder from './RouteFinder';
+import RouteFinder from './RouteFinder.jsx';
 
 const App = () => {
   const [stations, setStations] = useState([]);
