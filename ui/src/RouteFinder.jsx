@@ -1,4 +1,3 @@
-// src/RouteFinder.js
 import React, { useState } from 'react';
 import axios from 'axios';
 import {
@@ -64,7 +63,7 @@ const RouteFinder = ({ stations }) => {
   return (
     <div>
       <h2>Route Finder</h2>
-      <FormControl fullWidth>
+      <FormControl>
         <InputLabel>Source station</InputLabel>
         <Select value={source} onChange={(e) => setSource(e.target.value)}>
           {stations.map((station) => (
@@ -74,7 +73,7 @@ const RouteFinder = ({ stations }) => {
           ))}
         </Select>
       </FormControl>
-      <FormControl fullWidth>
+      <FormControl>
         <InputLabel>Destination station</InputLabel>
         <Select
           value={destination}
@@ -89,6 +88,7 @@ const RouteFinder = ({ stations }) => {
       </FormControl>
       <TextField
         label="Start time"
+        variant="outlined"
         type="time"
         value={startTime}
         onChange={(e) => setStartTime(e.target.value)}
@@ -96,6 +96,7 @@ const RouteFinder = ({ stations }) => {
       />
       <TextField
         label="End time"
+        variant="outlined"
         type="time"
         value={endTime}
         onChange={(e) => setEndTime(e.target.value)}
