@@ -67,7 +67,6 @@ const theme = createTheme({
         MuiInputLabel: {
             styleOverrides: {
                 root: {
-                    margin: '8px',
                     color: '#3f51b5',
                 },
             },
@@ -82,7 +81,6 @@ const theme = createTheme({
         MuiSelect: {
             styleOverrides: {
                 root: {
-                    margin: '8px',
                     minWidth: '120px',
                 },
             },
@@ -126,29 +124,6 @@ const theme = createTheme({
             },
         },
         MuiTypography: {
-            styleOverrides: {
-                root: {
-                    margin: '8px',
-                },
-            },
-        },
-        MuiList: {
-            styleOverrides: {
-                root: {
-                    padding: '16px',
-                    margin: '8px 0',
-                    width: '100%',
-                },
-            },
-        },
-        MuiListItem: {
-            styleOverrides: {
-                root: {
-                    padding: '10px',
-                },
-            },
-        },
-        MuiListItemText: {
             styleOverrides: {
                 root: {
                     margin: '8px',
