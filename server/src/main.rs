@@ -25,6 +25,8 @@ use rocket::State;
 use std::path::PathBuf;
 use std::{fs::File, io::BufReader, path::Path};
 
+const VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
+
 #[cfg(test)]
 mod tests;
 
@@ -138,7 +140,7 @@ fn rocket(data: RailroadData, static_path: Option<&Path>) -> rocket::Rocket<rock
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
     let matches = Command::new("HaRail Server")
-        .version("1.0.2")
+        .version(VERSION.unwrap_or_default())
         .author("Yuval Deutscher")
         .about("Because the Israel Railways app sucks™ (server edition)")
         .arg(
