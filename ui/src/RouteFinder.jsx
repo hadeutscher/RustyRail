@@ -1,11 +1,8 @@
-// src/RouteFinder.js
 import React, { useState } from 'react';
 import axios from 'axios';
 import {
-  FormControl,
-  InputLabel,
+  Card,
   MenuItem,
-  Select,
   TextField,
   Button,
   Typography,
@@ -41,6 +38,18 @@ const RouteFinder = ({ stations }) => {
   const [endTime, setEndTime] = useState('');
   const [routes, setRoutes] = useState([]);
 
+  const sortStations = (stations) => {
+    return stations.sort((a, b) => {
+      if (a.name < b.name) {
+        return -1;
+      }
+      if (a.name > b.name) {
+        return 1;
+      }
+      return 0;
+    });
+  };
+
   const handleSearch = async () => {
     try {
       // Make API request to /harail/routes/find with selected parameters
@@ -64,42 +73,39 @@ const RouteFinder = ({ stations }) => {
   return (
     <div>
       <h2>Route Finder</h2>
-      <FormControl fullWidth>
-        <InputLabel>Source station</InputLabel>
-        <Select value={source} onChange={(e) => setSource(e.target.value)}>
-          {stations.map((station) => (
-            <MenuItem key={station.id} value={station.id}>
-              {station.name}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <FormControl fullWidth>
-        <InputLabel>Destination station</InputLabel>
-        <Select
-          value={destination}
-          onChange={(e) => setDestination(e.target.value)}
-        >
-          {stations.map((station) => (
-            <MenuItem key={station.id} value={station.id}>
-              {station.name}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      <TextField select
+        label="Source station"
+        onChange={(e) => setSource(e.target.value)}>
+        {sortStations(stations).map((station) => (
+          <MenuItem key={station.id} value={station.id}>
+            {station.name}
+          </MenuItem>
+        ))}
+      </TextField>
+      <TextField select
+        label="Destination station"
+        onChange={(e) => setDestination(e.target.value)}>
+        {sortStations(stations).map((station) => (
+          <MenuItem key={station.id} value={station.id}>
+            {station.name}
+          </MenuItem>
+        ))}
+      </TextField>
       <TextField
         label="Start time"
+        variant="outlined"
         type="time"
         value={startTime}
+        slotProps={{ inputLabel: { shrink: true } }}
         onChange={(e) => setStartTime(e.target.value)}
-        fullWidth
       />
       <TextField
         label="End time"
+        variant="outlined"
         type="time"
         value={endTime}
+        slotProps={{ inputLabel: { shrink: true } }}
         onChange={(e) => setEndTime(e.target.value)}
-        fullWidth
       />
       <Button variant="contained" onClick={handleSearch}>
         Search Routes
@@ -108,23 +114,21 @@ const RouteFinder = ({ stations }) => {
       {routes.length > 0 ? (
         <div>
           <Typography variant="h6">Routes:</Typography>
-          <List>
-            {routes.map((route) => (
-              <ListItem>
-                <List>
-                  {route.parts.map((part) => (
-                    <ListItem key={part.train}>
-                      <ListItemText primary={
-                        `${stations.find((station) => station.id === part.start_station).name} ל` +
-                        `${stations.find((station) => station.id === part.end_station).name} ` +
-                        `(${convertToHHMM(part.start_time)} - ${convertToHHMM(part.end_time)})`
-                      } />
-                    </ListItem>
-                  ))}
-                </List>
-              </ListItem>
-            ))}
-          </List>
+          {routes.map((route) => (
+            <Card variant="outlined">
+              <List>
+                {route.parts.map((part) => (
+                  <ListItem key={part.train}>
+                    <ListItemText primary={
+                      `${stations.find((station) => station.id === part.start_station).name} ל` +
+                      `${stations.find((station) => station.id === part.end_station).name} ` +
+                      `(${convertToHHMM(part.start_time)} - ${convertToHHMM(part.end_time)})`
+                    } />
+                  </ListItem>
+                ))}
+              </List>
+            </Card>
+          ))}
         </div>
       ) : (
         <Typography>No routes found.</Typography>

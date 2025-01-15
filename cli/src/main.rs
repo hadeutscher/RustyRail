@@ -15,10 +15,11 @@ use std::io::{BufReader, BufWriter};
 use std::path::Path;
 
 const JSON_SPACES: u16 = 4;
+const VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
 
 fn main() -> Result<(), Box<dyn Error>> {
     let matches = Command::new("HaRail")
-        .version("1.0.2")
+        .version(VERSION.unwrap_or_default())
         .author("Yuval Deutscher")
         .about("Because the Israel Railways app sucks™")
         .arg(

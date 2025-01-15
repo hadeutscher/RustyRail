@@ -13,14 +13,14 @@ RUN cargo build --release --bin harail_server
 
 FROM node:23 AS frontend
 WORKDIR /app
-COPY ui/harail/package.json ui/harail/package-lock.json ./
+COPY ui/package.json ui/package-lock.json ./
 RUN npm install
-COPY ui/harail/ .
+COPY ui/ .
 RUN npm run build
 
 FROM debian:bookworm-slim
 COPY --from=builder /app/target/release/harail_server /usr/local/bin
-COPY --from=frontend /app/build /usr/share/harail/static
+COPY --from=frontend /app/dist /usr/share/harail/static
 
 ENV ROCKET_ADDRESS=0.0.0.0
 ENV ROCKET_PORT=8080
