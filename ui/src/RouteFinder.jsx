@@ -11,16 +11,17 @@ import {
   ListItem,
   ListItemText,
 } from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs from "dayjs";
 
-const convertToIsoTime = (hhmmTime) => {
-  const currentDate = new Date(); // Get the current date
+const convertToIsoTime = (date, hhmmTime) => {
   const timeParts = hhmmTime.split(":");
 
   return new Date(
     Date.UTC(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      currentDate.getDate(),
+      date.year(),
+      date.month(),
+      date.date(),
       parseInt(timeParts[0]),
       parseInt(timeParts[1])
     )
@@ -37,6 +38,7 @@ const convertToHHMM = (isoTime) => {
 const RouteFinder = ({ stations }) => {
   const [source, setSource] = useState("");
   const [destination, setDestination] = useState("");
+  const [date, setDate] = useState(dayjs());
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [routes, setRoutes] = useState([]);
@@ -60,9 +62,9 @@ const RouteFinder = ({ stations }) => {
         params: {
           search: "Multi",
           start_station: source,
-          start_time: convertToIsoTime(startTime),
+          start_time: convertToIsoTime(date, startTime),
           end_station: destination,
-          end_time: convertToIsoTime(endTime),
+          end_time: convertToIsoTime(date, endTime),
         },
       });
 
@@ -98,6 +100,11 @@ const RouteFinder = ({ stations }) => {
           </MenuItem>
         ))}
       </TextField>
+      <DatePicker
+        label="Date"
+        value={date}
+        onChange={(date) => setDate(date)}
+      />
       <TextField
         label="Start time"
         variant="outlined"
