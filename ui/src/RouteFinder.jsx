@@ -16,11 +16,13 @@ const convertToIsoTime = (hhmmTime) => {
   const timeParts = hhmmTime.split(':');
 
   return new Date(
-    currentDate.getFullYear(),
-    currentDate.getMonth(),
-    currentDate.getDate(),
-    parseInt(timeParts[0]),
-    parseInt(timeParts[1])
+    Date.UTC(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      currentDate.getDate(),
+      parseInt(timeParts[0]),
+      parseInt(timeParts[1])
+    )
   ).toISOString();
 };
 
