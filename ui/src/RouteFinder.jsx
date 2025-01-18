@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import { useState } from "react";
+import axios from "axios";
+import PropTypes from "prop-types";
 import {
   Card,
   MenuItem,
@@ -9,11 +10,11 @@ import {
   List,
   ListItem,
   ListItemText,
-} from '@mui/material';
+} from "@mui/material";
 
 const convertToIsoTime = (hhmmTime) => {
   const currentDate = new Date(); // Get the current date
-  const timeParts = hhmmTime.split(':');
+  const timeParts = hhmmTime.split(":");
 
   return new Date(
     Date.UTC(
@@ -28,16 +29,16 @@ const convertToIsoTime = (hhmmTime) => {
 
 const convertToHHMM = (isoTime) => {
   const date = new Date(isoTime);
-  const hours = date.getUTCHours().toString().padStart(2, '0');
-  const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+  const hours = date.getUTCHours().toString().padStart(2, "0");
+  const minutes = date.getUTCMinutes().toString().padStart(2, "0");
   return `${hours}:${minutes}`;
 };
 
 const RouteFinder = ({ stations }) => {
-  const [source, setSource] = useState('');
-  const [destination, setDestination] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [source, setSource] = useState("");
+  const [destination, setDestination] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [routes, setRoutes] = useState([]);
 
   const sortStations = (stations) => {
@@ -55,7 +56,7 @@ const RouteFinder = ({ stations }) => {
   const handleSearch = async () => {
     try {
       // Make API request to /harail/routes/find with selected parameters
-      const response = await axios.get('/harail/routes/find', {
+      const response = await axios.get("/harail/routes/find", {
         params: {
           search: "Multi",
           start_station: source,
@@ -68,25 +69,29 @@ const RouteFinder = ({ stations }) => {
       // Assuming the response contains an array of routes
       setRoutes(response.data);
     } catch (error) {
-      console.error('Error fetching routes:', error);
+      console.error("Error fetching routes:", error);
     }
   };
 
   return (
     <div>
       <h2>Route Finder</h2>
-      <TextField select
+      <TextField
+        select
         label="Source station"
-        onChange={(e) => setSource(e.target.value)}>
+        onChange={(e) => setSource(e.target.value)}
+      >
         {sortStations(stations).map((station) => (
           <MenuItem key={station.id} value={station.id}>
             {station.name}
           </MenuItem>
         ))}
       </TextField>
-      <TextField select
+      <TextField
+        select
         label="Destination station"
-        onChange={(e) => setDestination(e.target.value)}>
+        onChange={(e) => setDestination(e.target.value)}
+      >
         {sortStations(stations).map((station) => (
           <MenuItem key={station.id} value={station.id}>
             {station.name}
@@ -117,15 +122,17 @@ const RouteFinder = ({ stations }) => {
         <div>
           <Typography variant="h6">Routes:</Typography>
           {routes.map((route) => (
-            <Card variant="outlined">
+            <Card key={route.parts[0].train} variant="outlined">
               <List>
                 {route.parts.map((part) => (
                   <ListItem key={part.train}>
-                    <ListItemText primary={
-                      `${stations.find((station) => station.id === part.start_station).name} ל` +
-                      `${stations.find((station) => station.id === part.end_station).name} ` +
-                      `(${convertToHHMM(part.start_time)} - ${convertToHHMM(part.end_time)})`
-                    } />
+                    <ListItemText
+                      primary={
+                        `${stations.find((station) => station.id === part.start_station).name} ל` +
+                        `${stations.find((station) => station.id === part.end_station).name} ` +
+                        `(${convertToHHMM(part.start_time)} - ${convertToHHMM(part.end_time)})`
+                      }
+                    />
                   </ListItem>
                 ))}
               </List>
@@ -137,6 +144,10 @@ const RouteFinder = ({ stations }) => {
       )}
     </div>
   );
+};
+
+RouteFinder.propTypes = {
+  stations: PropTypes.array,
 };
 
 export default RouteFinder;

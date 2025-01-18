@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Card } from '@mui/material';
-import axios from 'axios';
-import RouteFinder from './RouteFinder.jsx';
+import { useState, useEffect } from "react";
+import { Container, Card } from "@mui/material";
+import axios from "axios";
+import RouteFinder from "./RouteFinder.jsx";
 
 const App = () => {
   const [stations, setStations] = useState([]);
@@ -9,10 +9,10 @@ const App = () => {
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const response = await axios.get('/harail/stations');
+        const response = await axios.get("/harail/stations");
         setStations(response.data);
       } catch (error) {
-        console.error('Error fetching stations:', error);
+        console.error("Error fetching stations:", error);
       }
     };
 
