@@ -4,5 +4,5 @@ inherits = "release"
 lto = "thin"
 
 [workspace]
-resolver = "2"
+resolver = "3"
 members = ["cli/", "lib/", "server/"]
