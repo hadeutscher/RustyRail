@@ -1,4 +1,4 @@
-FROM lukemathwalker/cargo-chef:0.1.68-rust-1 AS chef
+FROM lukemathwalker/cargo-chef:0.1.71-rust-1.84-alpine3.21 AS chef
 WORKDIR /app
 
 FROM chef AS planner
@@ -18,7 +18,7 @@ RUN npm install
 COPY ui/ .
 RUN npm run build
 
-FROM debian:bookworm-slim
+FROM alpine:3.21
 COPY --from=builder /app/target/release/harail_server /usr/local/bin
 COPY --from=frontend /app/dist /usr/share/harail/static
 
