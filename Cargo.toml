@@ -1,8 +1,10 @@
+cargo-features = ["edition2024"]
+
 # The profile that 'dist' will build with
 [profile.dist]
 inherits = "release"
 lto = "thin"
 
 [workspace]
-resolver = "2"
+resolver = "3"
 members = ["cli/", "lib/", "server/"]

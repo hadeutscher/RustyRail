@@ -1,3 +1,5 @@
+cargo-features = ["edition2024"]
+
 [package]
 name = "harail"
 version = "1.1.4"
@@ -8,7 +10,7 @@ repository = "https://github.com/hadeutscher/RustyRail"
 readme = "../README.md"
 keywords = ["transportation"]
 exclude = ["fixtures/*"]
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 chrono = { version = "0.4.19", features = ["serde"] }
