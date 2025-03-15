@@ -6,7 +6,7 @@
 
 mod test_data;
 use harail::{
-    HaDuration, RailroadData, Route, RoutePart, Station, Stop, StopSchedule, Train, JSON,
+    HaDuration, JSON, RailroadData, Route, RoutePart, Station, Stop, StopSchedule, Train,
 };
 use test_data::test_date;
 

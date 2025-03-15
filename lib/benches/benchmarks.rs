@@ -5,7 +5,7 @@
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use harail::RailroadData;
 use std::path::Path;
 

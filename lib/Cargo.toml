@@ -11,13 +11,13 @@ exclude = ["fixtures/*"]
 edition = "2024"
 
 [dependencies]
-chrono = { version = "0.4.19", features = ["serde"] }
-csv = "1.1.6"
-jzon = "0.12.4"
-priority-queue = "2.1.1"
-serde = { version = "1.0.130", features = ["derive"] }
-thiserror = "2.0.11"
-zip = "2.2.2"
+chrono = { version = "0.4.40", features = ["serde"] }
+csv = "1.3.1"
+jzon = "0.12.5"
+priority-queue = "2.2.2"
+serde = { version = "1.0.219", features = ["derive"] }
+thiserror = "2.0.12"
+zip = "2.2.3"
 
 [dev-dependencies]
 criterion = "0.5.1"

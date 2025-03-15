@@ -18,8 +18,8 @@ use std::error::Error;
 use std::fmt;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
-use std::io::prelude::*;
 use std::io::BufReader;
+use std::io::prelude::*;
 use std::path::Path;
 use std::result::Result;
 use zip::ZipArchive;
@@ -591,7 +591,7 @@ impl RailroadData {
                 _ => {
                     return Err(Box::new(HaError::GTFSError(
                         "Invalid date format".to_owned(),
-                    )))
+                    )));
                 }
             };
         }

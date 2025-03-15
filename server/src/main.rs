@@ -10,18 +10,19 @@
 #[macro_use]
 extern crate rocket;
 
-use bincode::deserialize_from;
+use bincode::config;
+use bincode::serde::decode_from_std_read;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use clap::{Arg, Command};
-use harail::{RailroadData, StationId, Stop, JSON};
+use harail::{JSON, RailroadData, StationId, Stop};
 use jzon::JsonValue;
+use rocket::State;
 use rocket::form::{self, FromFormField, ValueField};
 use rocket::fs::FileServer;
 use rocket::http::RawStr;
 use rocket::request::FromParam;
 use rocket::response::content::RawJson;
 use rocket::response::status;
-use rocket::State;
 use std::path::PathBuf;
 use std::{fs::File, io::BufReader, path::Path};
 
@@ -161,8 +162,8 @@ async fn main() -> Result<(), rocket::Error> {
     let static_path = matches.get_one::<String>("static").map(PathBuf::from);
     let path = Path::new(matches.get_one::<String>("DATABASE").unwrap());
     let file = File::open(path).unwrap();
-    let reader = BufReader::new(file);
-    let data: RailroadData = deserialize_from(reader).unwrap();
+    let mut reader = BufReader::new(file);
+    let data: RailroadData = decode_from_std_read(&mut reader, config::legacy()).unwrap();
     rocket(data, static_path.as_deref())
         .ignite()
         .await?

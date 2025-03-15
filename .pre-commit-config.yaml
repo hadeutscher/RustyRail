@@ -17,7 +17,7 @@ repos:
       - id: cargo-sort
         args: [--workspace]
   - repo: https://github.com/EmbarkStudios/cargo-deny
-    rev: 0.17.0
+    rev: 0.18.2
     hooks:
       - id: cargo-deny
         args: ["--all-features", "check"]
