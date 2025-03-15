@@ -1,6 +1,6 @@
 services:
   harail:
-    image: ghcr.io/hadeutscher/rustyrail/harail
+    image: ghcr.io/hadeutscher/harail
     build: .
     ports:
       - "8080:8080"

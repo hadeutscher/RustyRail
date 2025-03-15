@@ -7,7 +7,7 @@ on:
       - "v*"
 
 env:
-  GHCR_REPO: ghcr.io/hadeutscher/rustyrail/harail
+  GHCR_REPO: ghcr.io/hadeutscher/harail
 
 jobs:
   build:
