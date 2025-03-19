@@ -9,6 +9,7 @@ readme = "../README.md"
 keywords = ["transportation"]
 categories = ["command-line-utilities"]
 edition = "2024"
+publish = false
 
 [dependencies]
 bincode = { version = "2.0.1", features = ["serde"] }
