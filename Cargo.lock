@@ -838,7 +838,9 @@ dependencies = [
 name = "harail"
 version = "1.2.2"
 dependencies = [
+ "bincode",
  "chrono",
+ "clap",
  "criterion",
  "csv",
  "jzon",
@@ -846,17 +848,6 @@ dependencies = [
  "serde",
  "thiserror",
  "zip",
-]
-
-[[package]]
-name = "harail_cli"
-version = "1.2.2"
-dependencies = [
- "bincode",
- "chrono",
- "clap",
- "harail",
- "jzon",
 ]
 
 [[package]]
