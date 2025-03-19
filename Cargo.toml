@@ -5,4 +5,4 @@ lto = "thin"
 
 [workspace]
 resolver = "3"
-members = ["cli/", "lib/", "server/"]
+members = ["harail/", "server/"]
