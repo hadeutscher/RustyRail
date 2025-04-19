@@ -14,7 +14,7 @@ publish = false
 [dependencies]
 bincode = { version = "2.0.1", features = ["serde"] }
 chrono = "0.4.40"
-clap = "4.5.32"
+clap = "4.5.37"
 harail = { path = "../harail/" }
 jzon = "0.12.5"
 rocket = { version = "0.5.1", features = ["json"] }

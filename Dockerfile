@@ -1,4 +1,4 @@
-FROM lukemathwalker/cargo-chef:0.1.71-rust-1.85-alpine3.21 AS chef
+FROM lukemathwalker/cargo-chef:0.1.71-rust-1.86-alpine3.21 AS chef
 WORKDIR /app
 
 FROM chef AS planner
@@ -11,7 +11,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 RUN cargo build --release --bin harail_server
 
-FROM node:23 AS frontend
+FROM node:23-alpine3.21 AS frontend
 WORKDIR /app
 COPY ui/package.json ui/package-lock.json ./
 RUN npm install

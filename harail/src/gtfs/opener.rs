@@ -44,8 +44,8 @@ impl<R: Read + Seek> ZipFileOpener<R> {
     }
 }
 
-impl<'a, R: Read + Seek> FileOpener<'a> for ZipFileOpener<R> {
-    type Read = ZipFile<'a>;
+impl<'a, R: Read + Seek + 'a> FileOpener<'a> for ZipFileOpener<R> {
+    type Read = ZipFile<'a, R>;
 
     fn open(&'a mut self, name: &str) -> Result<Self::Read, Box<dyn Error>> {
         Ok(self.zip.by_name(name)?)
