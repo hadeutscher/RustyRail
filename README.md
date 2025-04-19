@@ -11,19 +11,29 @@ Public transport fastest-route finder for Israel Railways (Rust rewrite)
 ## Running from CLI
 
 ```
-./harail_cli ~/harail.db parse-gtfs ~/israel-public-transportation/
-./harail_cli ~/harail.db list-stations
+./harail ~/harail.db parse-gtfs ~/israel-public-transportation/
+./harail ~/harail.db list-stations
 ```
 
 If not present, obtain Israel's public transportation database from https://gtfs.mot.gov.il/gtfsfiles/israel-public-transportation.zip
 
-Refer to `./harail_cli -h` for more options.
+Refer to `./harail -h` for more options.
 
 ## Running a server
 
+### With docker
+
 ```
-./harail_server ~/harail.db
+docker run -p 8080:8080 -v $(pwd)/harail.db:/harail.db ghcr.io/hadeutscher/harail /harail.db
 ```
+
+### With docker compose
+
+```
+docker compose up -d
+```
+
+Then copy the db into the `db-data` volume.
 
 ## License
 
