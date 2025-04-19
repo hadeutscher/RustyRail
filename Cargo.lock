@@ -825,7 +825,7 @@ dependencies = [
 
 [[package]]
 name = "harail"
-version = "1.2.2"
+version = "1.3.0"
 dependencies = [
  "bincode",
  "chrono",
@@ -841,7 +841,7 @@ dependencies = [
 
 [[package]]
 name = "harail_server"
-version = "1.2.2"
+version = "1.3.0"
 dependencies = [
  "bincode",
  "chrono",

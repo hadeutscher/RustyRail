@@ -1,6 +1,6 @@
 [package]
 name = "harail"
-version = "1.2.2"
+version = "1.3.0"
 authors = ["Yuval Deutscher"]
 license = "MPL-2.0"
 description = "Public transport fastest-route finder for Israel Railways"
