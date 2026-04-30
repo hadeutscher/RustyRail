@@ -7,8 +7,10 @@
 //! Database management: downloading, caching, parsing, and periodically
 //! refreshing the GTFS feed from the Israel Ministry of Transport.
 
+use chrono::Local;
 use futures_util::StreamExt;
 use harail::RailroadData;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -25,16 +27,13 @@ pub type SharedData = Arc<RwLock<RailroadData>>;
 // Constants
 // ---------------------------------------------------------------------------
 
-/// File name used for the on-disk cache.
-pub const CACHE_FILE_NAME: &str = "israel-public-transportation.zip";
+/// File name of the postcard-serialized database cache.
+pub const CACHE_FILE_NAME: &str = "harail.db";
 
 const GTFS_URL: &str = "https://gtfs.mot.gov.il/gtfsfiles/israel-public-transportation.zip";
 
-/// How often the database is refreshed in the background (~30 days).
-const REFRESH_INTERVAL: Duration = Duration::from_secs(30 * 24 * 60 * 60);
-
-/// Maximum age of the on-disk cache before a fresh download is triggered.
-const CACHE_MAX_AGE_SECS: u64 = 7 * 24 * 60 * 60; // 1 week
+/// How often the background task wakes to fetch a new database (~30 days).
+const REFRESH_INTERVAL: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 
 // ---------------------------------------------------------------------------
 // Public helpers used by main
@@ -47,30 +46,35 @@ pub fn default_cache_dir() -> PathBuf {
         .join("harail")
 }
 
-/// On startup: returns a parsed [`RailroadData`] from the on-disk cache when
-/// it is younger than one week, otherwise downloads a fresh copy first.
+/// On startup: loads the postcard-serialized cache if `end_date()` is today or
+/// later, otherwise downloads, parses and re-caches a fresh GTFS feed.
 pub async fn load_or_download(
     cache_path: &Path,
 ) -> Result<RailroadData, Box<dyn std::error::Error + Send + Sync>> {
-    if cache_is_fresh(cache_path) {
-        println!(
-            "Cache is fresh (< 7 days old) — loading from {}…",
-            cache_path.display()
-        );
-        println!("Parsing GTFS data…");
-        match parse_zip_file(cache_path.to_path_buf()).await {
-            Ok(data) => {
-                println!("GTFS data loaded from cache successfully.");
-                return Ok(data);
-            }
-            Err(e) => eprintln!("Cache load failed ({e}); falling back to fresh download…"),
+    match load_from_cache(cache_path).await {
+        Ok(data) if is_data_fresh(&data) => {
+            // unwrap is safe: is_data_fresh only returns true when end_date is Some
+            println!(
+                "Cache is still valid (end date: {}) — skipping download.",
+                data.end_date().unwrap()
+            );
+            return Ok(data);
+        }
+        Ok(data) => {
+            let end = data
+                .end_date()
+                .map_or_else(|| "none".to_string(), |d| d.to_string());
+            println!("Cache is stale (end date: {end}) — downloading fresh data…");
+        }
+        Err(e) => {
+            println!("No usable cache ({e}) — downloading fresh data…");
         }
     }
-    download_and_cache(cache_path).await
+    download_parse_and_cache(cache_path).await
 }
 
-/// Background task that wakes every 30 days, downloads a fresh GTFS zip,
-/// saves it to `cache_path`, and atomically swaps the in-memory database.
+/// Background task that wakes every 30 days, downloads a fresh GTFS feed,
+/// caches the parsed database, and atomically swaps the in-memory database.
 ///
 /// On failure the existing database is kept and an error is printed; the
 /// task continues running and will retry at the next interval.
@@ -78,7 +82,7 @@ pub async fn refresh_task(shared: SharedData, cache_path: PathBuf) {
     loop {
         tokio::time::sleep(REFRESH_INTERVAL).await;
         println!("Starting scheduled monthly GTFS refresh…");
-        match download_and_cache(&cache_path).await {
+        match download_parse_and_cache(&cache_path).await {
             Ok(new_data) => {
                 *shared.write().await = new_data;
                 println!("GTFS database refreshed and cached successfully.");
@@ -94,65 +98,66 @@ pub async fn refresh_task(shared: SharedData, cache_path: PathBuf) {
 // Private implementation
 // ---------------------------------------------------------------------------
 
-/// Returns `true` when `path` exists and its modification time is younger
-/// than [`CACHE_MAX_AGE_SECS`].
-fn cache_is_fresh(path: &Path) -> bool {
-    let Ok(meta) = std::fs::metadata(path) else {
-        return false;
-    };
-    let Ok(modified) = meta.modified() else {
-        return false;
-    };
-    let Ok(age) = modified.elapsed() else {
-        return false;
-    };
-    age.as_secs() < CACHE_MAX_AGE_SECS
+/// Returns `true` when the database's end date is today or in the future.
+fn is_data_fresh(data: &RailroadData) -> bool {
+    data.end_date()
+        .map(|end| end >= (Local::now() + REFRESH_INTERVAL).date_naive())
+        .unwrap_or(false)
 }
 
-/// Parses a GTFS zip that is already on disk into a [`RailroadData`].
-///
-/// Parsing is CPU-intensive, so this runs on the blocking thread pool.
-/// `from_gtfs_zip` returns `Box<dyn Error>` (not `Send`), so the error is
-/// stringified inside the closure and re-boxed as `Send + Sync` outside.
-async fn parse_zip_file(
-    path: PathBuf,
-) -> Result<RailroadData, Box<dyn std::error::Error + Send + Sync>> {
-    tokio::task::spawn_blocking(move || {
-        RailroadData::from_gtfs_zip(&path).map_err(|e| e.to_string())
-    })
-    .await?
-    .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.into() })
-}
-
-/// Downloads the GTFS zip from the Ministry of Transport, saves it to
-/// `cache_path`, and returns the parsed database.
-///
-/// The temp file is created inside the cache directory so that the final
-/// rename is always on the same filesystem (avoids cross-device move errors).
-async fn download_and_cache(
+/// Loads and deserializes the postcard-serialized database from disk.
+/// Runs on the blocking thread pool so the async executor is not stalled.
+async fn load_from_cache(
     cache_path: &Path,
 ) -> Result<RailroadData, Box<dyn std::error::Error + Send + Sync>> {
-    // Ensure the cache directory exists.
+    let path = cache_path.to_path_buf();
+    tokio::task::spawn_blocking(move || {
+        let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
+        postcard::from_bytes::<RailroadData>(&bytes).map_err(|e| e.to_string())
+    })
+    .await?
+    .map_err(|e: String| -> Box<dyn std::error::Error + Send + Sync> { e.into() })
+}
+
+/// Serializes `data` to `cache_path` using a temp file in the same directory
+/// so the final rename is atomic (same filesystem).
+fn save_to_cache(data: &RailroadData, cache_path: &Path) -> std::io::Result<()> {
     if let Some(dir) = cache_path.parent() {
         std::fs::create_dir_all(dir)?;
     }
+    let cache_dir = cache_path.parent().unwrap_or_else(|| Path::new("."));
+    let mut temp_file = tempfile::Builder::new()
+        .prefix("harail-db-")
+        .suffix(".tmp")
+        .tempfile_in(cache_dir)?;
+    postcard::to_io(data, &mut temp_file).map_err(std::io::Error::other)?;
+    temp_file.flush()?;
+    // Atomically replace the cache file.  Falls back to copy on Windows when
+    // the target already exists (rename-over-existing is not atomic there).
+    if let Err(e) = temp_file.persist(cache_path) {
+        std::fs::copy(e.file.path(), cache_path)?;
+    }
+    Ok(())
+}
 
+/// Downloads the GTFS zip to a temporary file, then, on the blocking thread
+/// pool, parses it with [`RailroadData::from_gtfs_zip`] and saves the result
+/// as a postcard-serialized cache.  The zip is discarded after parsing.
+async fn download_parse_and_cache(
+    cache_path: &Path,
+) -> Result<RailroadData, Box<dyn std::error::Error + Send + Sync>> {
     println!("Downloading GTFS data from {GTFS_URL} …");
     let response = reqwest::get(GTFS_URL).await?;
     let content_length = response.content_length();
 
-    let cache_dir = cache_path.parent().unwrap_or_else(|| Path::new("."));
-    let mut temp_file = tempfile::Builder::new()
-        .prefix("gtfs-")
-        .suffix(".zip.tmp")
-        .tempfile_in(cache_dir)?;
-
+    // Stream the zip into a temporary file (no need to keep it after parsing).
+    let mut temp_zip = tempfile::NamedTempFile::new()?;
     let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
     while let Some(chunk) = stream.next().await {
         let chunk = chunk?;
         downloaded += chunk.len() as u64;
-        std::io::Write::write_all(&mut temp_file, &chunk)?;
+        temp_zip.write_all(&chunk)?;
         match content_length {
             Some(total) => print!(
                 "\r  {downloaded}/{total} bytes ({:.1}%)",
@@ -161,21 +166,32 @@ async fn download_and_cache(
             None => print!("\r  {downloaded} bytes"),
         }
     }
-    println!(); // newline after progress line
+    println!();
     println!("Download complete ({downloaded} bytes).");
 
-    // Atomically replace the old cache file.  `persist` uses rename(2) /
-    // MoveFileEx, which is atomic on most systems.  On Windows it fails when
-    // the target already exists, so we fall back to a plain copy.
-    let cache_path_owned = cache_path.to_path_buf();
-    if let Err(e) = temp_file.persist(&cache_path_owned) {
-        std::fs::copy(e.file.path(), &cache_path_owned)?;
-        // `e.file` (the NamedTempFile) is dropped here, cleaning up the temp.
-    }
-    println!("Cached to {}.", cache_path.display());
-
+    // Parse the zip and save the postcard cache on the blocking thread pool.
+    // Both operations are CPU/IO-heavy and belong off the async executor.
+    // `from_gtfs_zip` returns `Box<dyn Error>` (not Send), so errors are
+    // stringified inside the closure and re-boxed as Send + Sync outside.
     println!("Parsing GTFS data…");
-    let data = parse_zip_file(cache_path_owned).await?;
+    let zip_path = temp_zip.path().to_path_buf();
+    let cache_path_owned = cache_path.to_path_buf();
+    let data = tokio::task::spawn_blocking(move || {
+        let _keep = temp_zip; // keep the temp file alive until parsing is done
+        let data = RailroadData::from_gtfs_zip(&zip_path).map_err(|e| e.to_string())?;
+        if let Err(e) = save_to_cache(&data, &cache_path_owned) {
+            eprintln!("Warning: failed to write database cache: {e}");
+        } else {
+            println!(
+                "Serialized database cached to {}",
+                cache_path_owned.display()
+            );
+        }
+        Ok::<_, String>(data)
+    })
+    .await?
+    .map_err(|e: String| -> Box<dyn std::error::Error + Send + Sync> { e.into() })?;
+
     println!("GTFS data parsed successfully.");
     Ok(data)
 }
