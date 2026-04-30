@@ -270,12 +270,12 @@ impl<'a> RoutePart<'a> {
     }
 
     /// The stop at which the train is boarded
-    pub fn start(&self) -> Stop {
+    pub fn start(&self) -> Stop<'_> {
         self.start
     }
 
     /// The stop at which the train is unboarded
-    pub fn end(&self) -> Stop {
+    pub fn end(&self) -> Stop<'_> {
         self.end
     }
 }
@@ -324,7 +324,7 @@ impl<'a> Route<'a> {
     }
 
     /// Iterate over the parts of the route. Each RoutePart corresponds to a single train ride.
-    pub fn parts(&self) -> impl Iterator<Item = &RoutePart> {
+    pub fn parts(&self) -> impl Iterator<Item = &RoutePart<'_>> {
         self.parts.iter()
     }
 }
