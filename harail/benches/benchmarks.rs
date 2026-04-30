@@ -5,9 +5,9 @@
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use harail::RailroadData;
-use std::path::Path;
+use std::{hint::black_box, path::Path};
 
 fn database_load(c: &mut Criterion) {
     c.bench_function("small GTFS load", |b| {

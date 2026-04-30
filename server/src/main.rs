@@ -10,10 +10,11 @@
 #[macro_use]
 extern crate rocket;
 
-use bincode::config;
-use bincode::serde::decode_from_std_read;
+mod db;
+
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use clap::{Arg, Command};
+use db::{CACHE_FILE_NAME, SharedData, default_cache_dir, load_or_download, refresh_task};
 use harail::{JSON, RailroadData, StationId, Stop};
 use jzon::JsonValue;
 use rocket::State;
@@ -23,16 +24,22 @@ use rocket::http::RawStr;
 use rocket::request::FromParam;
 use rocket::response::content::RawJson;
 use rocket::response::status;
-use std::path::PathBuf;
-use std::{fs::File, io::BufReader, path::Path};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 const VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
 
 #[cfg(test)]
 mod tests;
 
+// ---------------------------------------------------------------------------
+// Route handlers
+// ---------------------------------------------------------------------------
+
 #[get("/stations")]
-fn list_stations(data: &State<RailroadData>) -> RawJson<String> {
+async fn list_stations(data: &State<SharedData>) -> RawJson<String> {
+    let data = data.read().await;
     let json = JsonValue::Array(data.stations().map(|s| s.to_json()).collect());
     RawJson(json.dump())
 }
@@ -49,12 +56,13 @@ impl<'v> FromParam<'v> for HaDate {
 }
 
 #[get("/trains/<id>/stops/<date>")]
-fn get_train(data: &State<RailroadData>, id: &str, date: HaDate) -> Option<RawJson<String>> {
+async fn get_train(data: &State<SharedData>, id: &str, date: HaDate) -> Option<RawJson<String>> {
+    let data = data.read().await;
     let train = data.train(id)?;
     let json = JsonValue::Array(
         train
             .stops()
-            .map(|s| Stop::from_stop_schedule(data, s, date.0).to_json())
+            .map(|s| Stop::from_stop_schedule(&data, s, date.0).to_json())
             .collect(),
     );
     Some(RawJson(json.dump()))
@@ -89,10 +97,11 @@ struct FindOptions {
 }
 
 #[get("/routes/find?<options..>")]
-fn find_route(
-    data: &State<RailroadData>,
+async fn find_route(
+    data: &State<SharedData>,
     options: FindOptions,
 ) -> Result<RawJson<String>, status::NotFound<String>> {
+    let data = data.read().await;
     let start_station = data
         .station(options.start_station)
         .ok_or_else(|| status::NotFound(String::from("start station not found")))?;
@@ -103,13 +112,13 @@ fn find_route(
     let end_time = options.end_time.0;
     Ok(RawJson(match options.search {
         SearchType::Best => {
-            harail::get_best_single_route(data, start_time, start_station, end_time, end_station)
+            harail::get_best_single_route(&data, start_time, start_station, end_time, end_station)
                 .ok_or_else(|| status::NotFound(String::from("no possible route found")))?
                 .to_json()
                 .dump()
         }
         SearchType::Latest => harail::get_latest_good_single_route(
-            data,
+            &data,
             start_time,
             start_station,
             end_time,
@@ -119,7 +128,7 @@ fn find_route(
         .to_json()
         .dump(),
         SearchType::Multi => JsonValue::Array(
-            harail::get_multiple_routes(data, start_time, start_station, end_time, end_station)
+            harail::get_multiple_routes(&data, start_time, start_station, end_time, end_station)
                 .into_iter()
                 .map(|r| r.to_json())
                 .collect(),
@@ -128,28 +137,40 @@ fn find_route(
     }))
 }
 
-fn rocket(data: RailroadData, static_path: Option<&Path>) -> rocket::Rocket<rocket::Build> {
-    let rocket = rocket::build()
-        .manage(data)
+// ---------------------------------------------------------------------------
+// Rocket setup
+// ---------------------------------------------------------------------------
+
+/// Builds the Rocket instance from an already-loaded [`RailroadData`].
+/// Used directly by tests so they can supply synthetic data without going
+/// through the network.
+pub fn rocket(data: RailroadData, static_path: Option<&Path>) -> rocket::Rocket<rocket::Build> {
+    rocket_from_shared(Arc::new(RwLock::new(data)), static_path)
+}
+
+fn rocket_from_shared(
+    shared: SharedData,
+    static_path: Option<&Path>,
+) -> rocket::Rocket<rocket::Build> {
+    let r = rocket::build()
+        .manage(shared)
         .mount("/harail", routes![list_stations, get_train, find_route]);
     match static_path {
-        Some(path) => rocket.mount("/", FileServer::from(path)),
-        None => rocket,
+        Some(path) => r.mount("/", FileServer::from(path)),
+        None => r,
     }
 }
 
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
+
 #[rocket::main]
-async fn main() -> Result<(), rocket::Error> {
+async fn main() -> Result<(), Box<rocket::Error>> {
     let matches = Command::new("HaRail Server")
         .version(VERSION.unwrap_or_default())
         .author("Yuval Deutscher")
         .about("Because the Israel Railways app sucks™ (server edition)")
-        .arg(
-            Arg::new("DATABASE")
-                .help("The HaRail database to use")
-                .required(true)
-                .index(1),
-        )
         .arg(
             Arg::new("static")
                 .short('s')
@@ -157,14 +178,33 @@ async fn main() -> Result<(), rocket::Error> {
                 .value_name("STATIC")
                 .help("Path to static assets (optional)"),
         )
+        .arg(
+            Arg::new("cache-dir")
+                .short('c')
+                .long("cache-dir")
+                .value_name("CACHE_DIR")
+                .help("Directory for the cached GTFS zip (default: OS cache dir + 'harail')"),
+        )
         .get_matches();
 
     let static_path = matches.get_one::<String>("static").map(PathBuf::from);
-    let path = Path::new(matches.get_one::<String>("DATABASE").unwrap());
-    let file = File::open(path).unwrap();
-    let mut reader = BufReader::new(file);
-    let data: RailroadData = decode_from_std_read(&mut reader, config::legacy()).unwrap();
-    rocket(data, static_path.as_deref())
+    let cache_dir = matches
+        .get_one::<String>("cache-dir")
+        .map(PathBuf::from)
+        .unwrap_or_else(default_cache_dir);
+    let cache_path = cache_dir.join(CACHE_FILE_NAME);
+
+    println!("GTFS cache path: {}", cache_path.display());
+    let initial_data = load_or_download(&cache_path)
+        .await
+        .expect("Failed to load GTFS data on startup");
+
+    let shared: SharedData = Arc::new(RwLock::new(initial_data));
+
+    // Spawn the background task that re-fetches the GTFS feed every 30 days.
+    tokio::spawn(refresh_task(Arc::clone(&shared), cache_path));
+
+    rocket_from_shared(shared, static_path.as_deref())
         .ignite()
         .await?
         .launch()

@@ -24,7 +24,7 @@ Refer to `./harail -h` for more options.
 ### With docker
 
 ```
-docker run -p 8080:8080 -v $(pwd)/harail.db:/harail.db ghcr.io/hadeutscher/harail /harail.db
+docker run -p 8080:8080 ghcr.io/hadeutscher/harail
 ```
 
 ### With docker compose
@@ -32,8 +32,6 @@ docker run -p 8080:8080 -v $(pwd)/harail.db:/harail.db ghcr.io/hadeutscher/harai
 ```
 docker compose up -d
 ```
-
-Then copy the db into the `db-data` volume.
 
 ## License
 
