@@ -4,15 +4,13 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use bincode::config;
-use bincode::serde::{decode_from_std_read, encode_into_std_write};
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use clap::{Arg, Command};
 use harail::{HaError, JSON, RailroadData};
 use jzon::JsonValue;
 use std::error::Error;
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::{BufReader, BufWriter, Read};
 use std::path::Path;
 
 const JSON_SPACES: u16 = 4;
@@ -117,7 +115,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             HaError::UsageError("Could not open database file for writing".to_owned())
         })?;
         let mut writer = BufWriter::new(file);
-        encode_into_std_write(&data, &mut writer, config::legacy())
+        postcard::to_io(&data, &mut writer)
             .map_err(|_| HaError::UsageError("Could not serialize database".to_owned()))?;
         return Ok(());
     }
@@ -125,7 +123,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let file = File::open(path)
         .map_err(|_| HaError::UsageError("Could not open database file".to_owned()))?;
     let mut reader = BufReader::new(file);
-    let data: RailroadData = decode_from_std_read(&mut reader, config::legacy())
+    let mut bytes = Vec::new();
+    reader
+        .read_to_end(&mut bytes)
+        .map_err(|_| HaError::UsageError("Could not read database file".to_owned()))?;
+    let data: RailroadData = postcard::from_bytes(&bytes)
         .map_err(|_| HaError::UsageError("Could not deserialize database".to_owned()))?;
     if matches.subcommand_matches("list-stations").is_some() {
         let mut stations: Vec<_> = data.stations().collect();
