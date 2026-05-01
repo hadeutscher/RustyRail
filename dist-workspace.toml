@@ -15,3 +15,5 @@ targets = [
     "aarch64-unknown-linux-musl",
     "aarch64-pc-windows-msvc",
 ]
+packages = ["harail"]
+precise-builds = true
