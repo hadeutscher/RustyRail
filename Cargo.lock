@@ -1977,7 +1977,7 @@ dependencies = [
 
 [[package]]
 name = "harail"
-version = "2.1.0"
+version = "2.1.1"
 dependencies = [
  "chrono",
  "clap",
@@ -1993,7 +1993,7 @@ dependencies = [
 
 [[package]]
 name = "harail-app"
-version = "2.1.0"
+version = "2.1.1"
 dependencies = [
  "axum",
  "chrono",
