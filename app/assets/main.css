@@ -1,0 +1,182 @@
+/* ── Design tokens ─────────────────────────────────────────────────────── */
+:root {
+    --primary: #3f51b5;
+    --primary-dark: #303f9f;
+    --secondary: #f50057;
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --text: rgba(0, 0, 0, 0.87);
+    --text-secondary: rgba(0, 0, 0, 0.6);
+    --border: rgba(0, 0, 0, 0.23);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 3px 6px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+    --radius: 4px;
+}
+
+/* ── Reset ─────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Roboto, Arial, sans-serif;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+}
+
+/* ── Layout ────────────────────────────────────────────────────────────── */
+.container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* ── Typography ─────────────────────────────────────────────────────────── */
+h1 {
+    font-size: 2.5rem;
+    font-weight: 300;
+    color: var(--primary);
+    margin: 8px 0 16px;
+    letter-spacing: -0.5px;
+}
+h2 {
+    font-size: 1.75rem;
+    font-weight: 400;
+    margin-bottom: 16px;
+}
+h3.routes-header {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin: 16px 0 8px;
+}
+
+/* ── Card ───────────────────────────────────────────────────────────────── */
+.card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    padding: 24px;
+    margin: 8px 0;
+    width: 100%;
+}
+.card-outlined {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin: 6px 0;
+}
+
+/* ── Form fields ────────────────────────────────────────────────────────── */
+.form-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+    margin-bottom: 16px;
+    width: 100%;
+}
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 180px;
+    min-width: 160px;
+}
+.form-field label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.form-field select,
+.form-field input {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-family: inherit;
+    background: transparent;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+}
+.form-field select:focus,
+.form-field input:focus {
+    border-color: var(--primary);
+    border-width: 2px;
+    padding: 8px 11px; /* compensate for extra border px */
+}
+
+/* ── Button ─────────────────────────────────────────────────────────────── */
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    box-shadow: var(--shadow-sm);
+    transition:
+        background 0.2s,
+        box-shadow 0.2s;
+    margin: 4px 0 12px;
+}
+.btn-primary:hover:not(:disabled) {
+    background: var(--primary-dark);
+    box-shadow: var(--shadow-md);
+}
+.btn-primary:disabled {
+    background: rgba(0, 0, 0, 0.12);
+    color: rgba(0, 0, 0, 0.26);
+    box-shadow: none;
+    cursor: default;
+}
+
+/* ── Route list ─────────────────────────────────────────────────────────── */
+.routes-header {
+    text-align: center;
+}
+.route-list {
+    list-style: none;
+}
+.route-list li {
+    padding: 8px 4px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+    font-size: 0.95rem;
+    text-align: center;
+}
+.route-list li:last-child {
+    border-bottom: none;
+}
+
+/* ── Status text ─────────────────────────────────────────────────────────── */
+.error-text {
+    color: var(--secondary);
+    margin: 8px 0;
+    font-size: 0.9rem;
+}
+.muted-text {
+    color: var(--text-secondary);
+    margin: 8px 0;
+}
+.loading-text {
+    color: var(--text-secondary);
+    margin: 12px 0;
+    font-style: italic;
+}

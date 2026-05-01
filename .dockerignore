@@ -31,3 +31,6 @@ README.md
 
 # Test fixtures
 harail/fixtures/
+
+# Dioxus build artifacts
+**/dist

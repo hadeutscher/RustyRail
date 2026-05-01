@@ -16,3 +16,6 @@
 
 # Criterion benchmakrs
 **/criterion/
+
+# Dioxus build artifacts
+**/dist
