@@ -1,0 +1,14 @@
+[application]
+name = "harail"
+out_dir = "dist"
+asset_dir = "assets"
+
+[web.app]
+title = "HaRail"
+
+[web.watcher]
+reload_html = true
+watch_path = ["src", "assets"]
+
+[bundle]
+identifier = "sh.deut.harail"

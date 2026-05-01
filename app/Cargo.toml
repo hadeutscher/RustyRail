@@ -1,0 +1,50 @@
+[package]
+name = "harail-app"
+version = "2.0.0"
+authors = ["Yuval Deutscher"]
+license = "MPL-2.0"
+description = "Public transport fastest-route finder for Israel Railways (Server)"
+repository = "https://github.com/hadeutscher/RustyRail"
+readme = "../README.md"
+keywords = ["transportation"]
+categories = ["command-line-utilities"]
+edition = "2024"
+publish = false
+
+# ---------------------------------------------------------------------------
+# Features
+# ---------------------------------------------------------------------------
+# Build with `--features server` for the native server binary.
+# Build with `--features web`    for the WASM browser bundle (via `dx`).
+[features]
+default = []
+web = ["dioxus/web"]
+# Enable this when running on an Android emulator to hit the dev server on the
+# host machine. Android emulators expose the host at 10.0.2.2.
+android-dev = []
+server = [
+    "dioxus/server",
+    "dep:harail",
+    "dep:axum",
+    "dep:dirs",
+    "dep:futures-util",
+    "dep:postcard",
+    "dep:reqwest",
+    "dep:tempfile",
+]
+
+[dependencies]
+axum = { version = "0.8", optional = true }
+chrono = { version = "0.4" }
+dioxus = { version = "0.7", features = ["fullstack"] }
+dirs = { version = "6", optional = true }
+futures-util = { version = "0.3", optional = true }
+harail = { path = "../harail/", optional = true }
+postcard = { version = "1", features = ["use-std"], optional = true }
+reqwest = { version = "0.13", features = ["stream"], optional = true }
+serde = { version = "1", features = ["derive"] }
+tempfile = { version = "3", optional = true }
+tokio = { version = "1", features = ["rt", "time", "macros"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = { version = "0.3" }

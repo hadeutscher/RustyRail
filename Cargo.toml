@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["harail/", "server/"]
+members = ["app/", "harail/"]
 
 # The profile that 'dist' will build with
 [profile.dist]
