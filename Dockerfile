@@ -1,5 +1,5 @@
 # ── Stage 1: dependency cache (cargo-chef) ─────────────────────────────────
-FROM lukemathwalker/cargo-chef:0.1.77-rust-1.95-alpine3.23 AS chef
+FROM lukemathwalker/cargo-chef:0.1.77-rust-1.95-trixie AS chef
 WORKDIR /app
 
 # ── Stage 2: generate recipe ────────────────────────────────────────────────
@@ -10,11 +10,9 @@ RUN cargo chef prepare --recipe-path recipe.json
 # ── Stage 3: build ──────────────────────────────────────────────────────────
 FROM chef AS builder
 
-# Install system deps
-RUN apk add --no-cache build-base musl-dev pkgconfig openssl-dev openssl-libs-static perl
-
-# Install dioxus-cli (dx) for building the WASM frontend
-RUN cargo install dioxus-cli
+# Install dioxus-cli (dx)
+RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+RUN cargo binstall dioxus-cli
 
 # Pre-build (cache) the server dependencies
 COPY --from=planner /app/recipe.json recipe.json
@@ -28,7 +26,9 @@ WORKDIR /app
 RUN dx bundle --package harail-app --release --debug-symbols=false
 
 # ── Stage 4: minimal runtime image ──────────────────────────────────────────
-FROM alpine:3.23
+FROM debian:trixie-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/app/dist /opt/harail
 
