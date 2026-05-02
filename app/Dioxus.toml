@@ -12,3 +12,7 @@ watch_path = ["src", "assets"]
 
 [bundle]
 identifier = "sh.deut.harail"
+
+[android]
+compile_sdk = 36
+target_sdk = 36
