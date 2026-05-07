@@ -239,7 +239,10 @@ fn default_date_time() -> (String, String, String) {
 /// Root application component.
 #[component]
 fn App() -> Element {
-    let stations_res = use_resource(get_stations);
+    // use_server_future blocks SSR until the future resolves, then serialises
+    // the result into the page so the client hydrates with data already
+    // present — the None (loading) branch is never visible in practice.
+    let stations_res = use_server_future(get_stations)?;
 
     rsx! {
         document::Link { rel: "icon", href: asset!("/assets/favicon.ico") }
@@ -346,13 +349,15 @@ fn RouteFinder(props: RouteFinderProps) -> Element {
         div { class: "station-fields",
             div { class: "form-field",
                 label { r#for: "source", "Source station" }
-                select {
-                    id: "source",
-                    value: source(),
-                    onchange: move |e| source.set(e.value()),
+                select { id: "source", onchange: move |e| source.set(e.value()),
                     option { value: "", "Select source\u{2026}" }
                     for station in &stations {
-                        option { key: "{station.id}", value: "{station.id}", "{station.name}" }
+                        option {
+                            key: "{station.id}",
+                            value: "{station.id}",
+                            selected: station.id.to_string() == source(),
+                            "{station.name}"
+                        }
                     }
                 }
             }
@@ -365,13 +370,15 @@ fn RouteFinder(props: RouteFinderProps) -> Element {
             }
             div { class: "form-field",
                 label { r#for: "dest", "Destination station" }
-                select {
-                    id: "dest",
-                    value: destination(),
-                    onchange: move |e| destination.set(e.value()),
+                select { id: "dest", onchange: move |e| destination.set(e.value()),
                     option { value: "", "Select destination\u{2026}" }
                     for station in &stations {
-                        option { key: "{station.id}", value: "{station.id}", "{station.name}" }
+                        option {
+                            key: "{station.id}",
+                            value: "{station.id}",
+                            selected: station.id.to_string() == destination(),
+                            "{station.name}"
+                        }
                     }
                 }
             }
