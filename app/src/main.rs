@@ -13,6 +13,7 @@ mod db;
 mod tests;
 
 use dioxus::prelude::*;
+use dioxus_sdk::storage::{LocalStorage, use_storage};
 use types::{RouteDto, RoutePartDto, StationDto, TrainStopDto};
 
 // ---------------------------------------------------------------------------
@@ -273,8 +274,9 @@ struct RouteFinderProps {
 fn RouteFinder(props: RouteFinderProps) -> Element {
     let stations = props.stations;
 
-    let mut source = use_signal(String::new);
-    let mut destination = use_signal(String::new);
+    let mut source = use_storage::<LocalStorage, String>("harail_source".to_string(), String::new);
+    let mut destination =
+        use_storage::<LocalStorage, String>("harail_destination".to_string(), String::new);
     // Closures are only evaluated once (first mount); the current time at
     // mount becomes the live default which the user can then freely edit.
     let mut date = use_signal(|| default_date_time().0);
@@ -580,6 +582,11 @@ async fn main() {
 
 #[cfg(not(feature = "server"))]
 fn main() {
+    // On native targets (desktop / Android / iOS) this sets the directory used
+    // by LocalStorage to <OS data dir>/harail-app.  On WASM the macro is a
+    // no-op because the browser's localStorage is used instead.
+    dioxus_sdk::storage::set_dir!();
+
     dioxus::fullstack::set_server_url(cfg_select! {
         // In a standard Android emulator (AVD / Android Studio) the host machine
         // is reachable at 10.0.2.2. Use port 8080, the Dioxus fullstack default.

@@ -37,6 +37,7 @@ server = [
 axum = { version = "0.8", optional = true }
 chrono = { version = "0.4" }
 dioxus = { version = "0.7", features = ["fullstack"] }
+dioxus-sdk = { version = "0.7", features = ["storage"] }
 dirs = { version = "6", optional = true }
 futures-util = { version = "0.3", optional = true }
 harail = { path = "../harail/", optional = true }
