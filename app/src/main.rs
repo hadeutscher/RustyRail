@@ -12,6 +12,7 @@ mod db;
 #[cfg(all(test, feature = "server"))]
 mod tests;
 
+use chrono::{DateTime, FixedOffset};
 use dioxus::prelude::*;
 use dioxus_sdk::storage::{LocalStorage, use_storage};
 use types::{RouteDto, RoutePartDto, StationDto, TrainStopDto};
@@ -200,35 +201,45 @@ fn fmt_hhmm(iso: &str) -> String {
 // Default date / time helpers
 // ---------------------------------------------------------------------------
 
-/// Returns `(date, start_time, end_time)` as HTML-input-compatible strings
-/// (`"YYYY-MM-DD"`, `"HH:MM"`, `"HH:MM"`) using the **browser's** local clock
-/// on WASM and the **server's** local clock for SSR.
-#[cfg(target_arch = "wasm32")]
-fn default_date_time() -> (String, String, String) {
-    let now = js_sys::Date::new_0();
-    let year = now.get_full_year();
-    let month = now.get_month() + 1; // JS months are 0-indexed
-    let day = now.get_date();
-    let hour = now.get_hours();
-    let minute = now.get_minutes();
-    let end_h = (hour + 3) % 24;
-    (
-        format!("{year:04}-{month:02}-{day:02}"),
-        format!("{hour:02}:{minute:02}"),
-        format!("{end_h:02}:{minute:02}"),
-    )
+pub fn local_time() -> DateTime<FixedOffset> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        // Get JS Date (local time)
+        let date = js_sys::Date::new_0();
+
+        // Convert milliseconds → seconds + nanoseconds
+        let millis = date.get_time();
+        let secs = (millis / 1000.0) as i64;
+        let nanos = ((millis % 1000.0) * 1_000_000.0) as u32;
+
+        // Convert to UTC DateTime
+        let utc = DateTime::<chrono::Utc>::from_timestamp(secs, nanos).expect("invalid timestamp");
+
+        // Browser local offset (minutes)
+        let offset_minutes = date.get_timezone_offset() as i32 * -1;
+        let offset = FixedOffset::east_opt(offset_minutes * 60).expect("invalid offset");
+
+        utc.with_timezone(&offset)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        chrono::Local::now().fixed_offset()
+    }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-#[allow(unused)]
 fn default_date_time() -> (String, String, String) {
-    use chrono::Local;
-    let now = Local::now();
+    let now = local_time();
     let end = now + chrono::Duration::hours(3);
+    let end_time = if end.date_naive() > now.date_naive() {
+        "23:59".to_string()
+    } else {
+        end.format("%H:%M").to_string()
+    };
     (
         now.format("%Y-%m-%d").to_string(),
         now.format("%H:%M").to_string(),
-        end.format("%H:%M").to_string(),
+        end_time,
     )
 }
 
