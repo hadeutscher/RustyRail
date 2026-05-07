@@ -165,6 +165,78 @@ h3.routes-header {
     border-bottom: none;
 }
 
+/* ── Clickable route part ───────────────────────────────────────────────── */
+.route-part {
+    cursor: pointer;
+    user-select: none;
+}
+.route-part:hover {
+    background: rgba(63, 81, 181, 0.05);
+}
+.route-part-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.route-part-label {
+    flex: 1;
+    text-align: center;
+}
+.route-part-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+.route-part-train {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+.chevron {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+    display: inline-block;
+}
+.chevron.expanded {
+    transform: rotate(180deg);
+}
+
+/* ── Stops panel ─────────────────────────────────────────────────────────── */
+.stops-panel {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: rgba(63, 81, 181, 0.04);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--primary);
+}
+.stops-list {
+    list-style: none;
+}
+.stop-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 4px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    font-size: 0.85rem;
+}
+.stop-item:last-child {
+    border-bottom: none;
+}
+.stop-item--endpoint {
+    font-weight: 600;
+}
+.stop-name {
+    color: var(--text);
+}
+.stop-time {
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.82rem;
+}
+
 /* ── Status text ─────────────────────────────────────────────────────────── */
 .error-text {
     color: var(--secondary);

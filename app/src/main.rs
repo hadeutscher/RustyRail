@@ -13,7 +13,7 @@ mod db;
 mod tests;
 
 use dioxus::prelude::*;
-use types::{RouteDto, RoutePartDto, StationDto};
+use types::{RouteDto, RoutePartDto, StationDto, TrainStopDto};
 
 // ---------------------------------------------------------------------------
 // Server-only: shared state (global, set once at startup)
@@ -100,6 +100,40 @@ pub fn routes_from_data(
     Ok(dtos)
 }
 
+/// Resolves every stop for the given train identifier, returning them in
+/// schedule order as serialisable DTOs.
+#[cfg(feature = "server")]
+pub fn train_stops_from_data(
+    data: &harail::RailroadData,
+    train_id: &str,
+) -> Result<Vec<TrainStopDto>, String> {
+    let train = data
+        .train(train_id)
+        .ok_or_else(|| format!("Train '{train_id}' not found"))?;
+
+    let stops = train
+        .stops()
+        .map(|stop| {
+            let station_id = stop.station();
+            let station_name = data
+                .station(station_id)
+                .map_or_else(|| "Unknown".to_owned(), |s| s.name().to_owned());
+
+            let arr_secs = stop.arrival_offset().to_chrono().num_seconds() as u64;
+            let dep_secs = stop.departure_offset().to_chrono().num_seconds() as u64;
+
+            TrainStopDto {
+                station_id,
+                station_name,
+                arrival_offset: format!("{:02}:{:02}", arr_secs / 3600, (arr_secs % 3600) / 60),
+                departure_offset: format!("{:02}:{:02}", dep_secs / 3600, (dep_secs % 3600) / 60),
+            }
+        })
+        .collect();
+
+    Ok(stops)
+}
+
 // ---------------------------------------------------------------------------
 // Server functions  (signature visible to WASM; body runs on the server)
 // ---------------------------------------------------------------------------
@@ -133,6 +167,17 @@ pub async fn find_routes(
         .await;
     routes_from_data(&guard, start_station, &start_time, end_station, &end_time)
         .map_err(ServerFnError::new)
+}
+
+/// Returns all scheduled stops for the given train identifier, in order.
+#[server(endpoint = "get_train_stops")]
+pub async fn get_train_stops(train_id: String) -> Result<Vec<TrainStopDto>, ServerFnError> {
+    let guard = RAILROAD_DATA
+        .get()
+        .ok_or_else(|| ServerFnError::new("Database not initialised"))?
+        .read()
+        .await;
+    train_stops_from_data(&guard, &train_id).map_err(ServerFnError::new)
 }
 
 // ---------------------------------------------------------------------------
@@ -390,6 +435,9 @@ fn RouteCard(route: RouteDto, stations: Vec<StationDto>) -> Element {
 }
 
 /// Renders one leg of a journey.
+///
+/// Clicking the item toggles a stops panel that lazily fetches every
+/// scheduled stop for the train via [`get_train_stops`].
 #[component]
 fn RoutePartItem(part: RoutePartDto, stations: Vec<StationDto>) -> Element {
     let start_name = stations
@@ -402,8 +450,74 @@ fn RoutePartItem(part: RoutePartDto, stations: Vec<StationDto>) -> Element {
         .map_or_else(|| "Unknown".to_owned(), |s| s.name.clone());
     let st = fmt_hhmm(&part.start_time);
     let et = fmt_hhmm(&part.end_time);
+
+    let mut expanded = use_signal(|| false);
+    let mut stops: Signal<Option<Vec<TrainStopDto>>> = use_signal(|| None);
+    let mut loading = use_signal(|| false);
+    let mut fetch_error: Signal<Option<String>> = use_signal(|| None);
+
+    // Capture the train id for use inside the click handler.
+    let train_id = part.train.clone();
+
+    let handle_click = move |_| {
+        let now_expanded = !expanded();
+        expanded.set(now_expanded);
+
+        // Only fetch once, and only when opening the panel.
+        if now_expanded && stops().is_none() && !loading() {
+            let tid = train_id.clone();
+            loading.set(true);
+            fetch_error.set(None);
+            spawn(async move {
+                match get_train_stops(tid).await {
+                    Ok(s) => {
+                        stops.set(Some(s));
+                        loading.set(false);
+                    }
+                    Err(e) => {
+                        fetch_error.set(Some(format!("{e}")));
+                        loading.set(false);
+                    }
+                }
+            });
+        }
+    };
+
     rsx! {
-        li { "{start_name} \u{2190} {end_name}  ({st}\u{2013}{et})" }
+        li { class: "route-part", onclick: handle_click,
+            div { class: "route-part-header",
+                span { class: "route-part-label", "{start_name} \u{2190} {end_name}  ({st}\u{2013}{et})" }
+                span { class: "route-part-meta",
+                    span {
+                        class: if expanded() { "chevron expanded" } else { "chevron" },
+                        "\u{25bc}"
+                    }
+                }
+            }
+            if expanded() {
+                div { class: "stops-panel",
+                    if loading() {
+                        p { class: "loading-text", "Loading stops\u{2026}" }
+                    } else if let Some(err) = fetch_error() {
+                        p { class: "error-text", "Error: {err}" }
+                    } else if let Some(stop_list) = stops() {
+                        ul { class: "stops-list",
+                            for stop in stop_list {
+                                li {
+                                    class: if stop.station_id == part.start_station || stop.station_id == part.end_station {
+                                        "stop-item stop-item--endpoint"
+                                    } else {
+                                        "stop-item"
+                                    },
+                                    span { class: "stop-name", "{stop.station_name}" }
+                                    span { class: "stop-time", "{stop.arrival_offset}" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
