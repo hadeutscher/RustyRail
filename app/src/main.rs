@@ -510,10 +510,7 @@ fn RoutePartItem(part: RoutePartDto, stations: Vec<StationDto>) -> Element {
             div { class: "route-part-header",
                 span { class: "route-part-label", "{start_name} \u{2190} {end_name}  ({st}\u{2013}{et})" }
                 span { class: "route-part-meta",
-                    span {
-                        class: if expanded() { "chevron expanded" } else { "chevron" },
-                        "\u{25bc}"
-                    }
+                    span { class: if expanded() { "chevron expanded" } else { "chevron" }, "\u{25bc}" }
                 }
             }
             if expanded() {
@@ -525,12 +522,7 @@ fn RoutePartItem(part: RoutePartDto, stations: Vec<StationDto>) -> Element {
                     } else if let Some(stop_list) = stops() {
                         ul { class: "stops-list",
                             for stop in stop_list {
-                                li {
-                                    class: if stop.station_id == part.start_station || stop.station_id == part.end_station {
-                                        "stop-item stop-item--endpoint"
-                                    } else {
-                                        "stop-item"
-                                    },
+                                li { class: if stop.station_id == part.start_station || stop.station_id == part.end_station { "stop-item stop-item--endpoint" } else { "stop-item" },
                                     span { class: "stop-name", "{stop.station_name}" }
                                     span { class: "stop-time", "{stop.arrival_offset}" }
                                 }
