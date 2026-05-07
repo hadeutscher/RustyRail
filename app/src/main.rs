@@ -287,6 +287,13 @@ fn RouteFinder(props: RouteFinderProps) -> Element {
     // Clone for use in the results section (event handler moves other copies).
     let stations_display = stations.clone();
 
+    let handle_swap = move |_| {
+        let s = source();
+        let d = destination();
+        source.set(d);
+        destination.set(s);
+    };
+
     let handle_search = move |_| {
         let src = source();
         let dst = destination();
@@ -334,20 +341,33 @@ fn RouteFinder(props: RouteFinderProps) -> Element {
         h2 { "Route Finder" }
 
         // ── Row 1: Stations ─────────────────────────────────────────────
-        div { class: "form-fields",
+        div { class: "station-fields",
             div { class: "form-field",
                 label { r#for: "source", "Source station" }
-                select { id: "source", onchange: move |e| source.set(e.value()),
-                    option { value: "", "Select source…" }
+                select {
+                    id: "source",
+                    value: source(),
+                    onchange: move |e| source.set(e.value()),
+                    option { value: "", "Select source\u{2026}" }
                     for station in &stations {
                         option { key: "{station.id}", value: "{station.id}", "{station.name}" }
                     }
                 }
             }
+            button {
+                class: "btn-swap",
+                r#type: "button",
+                title: "Swap stations",
+                onclick: handle_swap,
+                "\u{21C4}"
+            }
             div { class: "form-field",
                 label { r#for: "dest", "Destination station" }
-                select { id: "dest", onchange: move |e| destination.set(e.value()),
-                    option { value: "", "Select destination…" }
+                select {
+                    id: "dest",
+                    value: destination(),
+                    onchange: move |e| destination.set(e.value()),
+                    option { value: "", "Select destination\u{2026}" }
                     for station in &stations {
                         option { key: "{station.id}", value: "{station.id}", "{station.name}" }
                     }
