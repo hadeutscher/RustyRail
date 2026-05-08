@@ -5,9 +5,8 @@
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 mod test_data;
-use harail::{
-    HaDuration, JSON, RailroadData, Route, RoutePart, Station, Stop, StopSchedule, Train,
-};
+use chrono::Duration;
+use harail::{JSON, RailroadData, Route, RoutePart, Station, Stop, StopSchedule, Train};
 use test_data::test_date;
 
 #[test]
@@ -21,8 +20,8 @@ fn route_save() {
     let trains = vec![Train::from_stops_date(
         "1",
         vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
-            StopSchedule::new(200, HaDuration::from_hms(10, 30, 00), None),
+            StopSchedule::new(100, Duration::hours(10), None),
+            StopSchedule::new(200, Duration::hours(10) + Duration::minutes(30), None),
         ],
         test_date(),
     )];

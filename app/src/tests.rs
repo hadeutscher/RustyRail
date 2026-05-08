@@ -13,8 +13,8 @@
 //!   cargo test --features server -p harail-app
 
 use super::{routes_from_data, stations_from_data};
-use chrono::NaiveDate;
-use harail::{HaDuration, RailroadData, Station, StopSchedule, Train};
+use chrono::{Duration, NaiveDate};
+use harail::{RailroadData, Station, StopSchedule, Train};
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -62,10 +62,10 @@ fn find_routes_single_train() {
     let trains = vec![Train::from_stops_dates(
         "1",
         vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 0, 0), None),
-            StopSchedule::new(200, HaDuration::from_hms(10, 30, 0), None),
-            StopSchedule::new(300, HaDuration::from_hms(11, 0, 0), None),
-            StopSchedule::new(400, HaDuration::from_hms(11, 30, 0), None),
+            StopSchedule::new(100, Duration::hours(10), None),
+            StopSchedule::new(200, Duration::hours(10) + Duration::minutes(30), None),
+            StopSchedule::new(300, Duration::hours(11), None),
+            StopSchedule::new(400, Duration::hours(11) + Duration::minutes(30), None),
         ],
         vec![fixture_date(), fixture_date().succ_opt().unwrap()],
     )];

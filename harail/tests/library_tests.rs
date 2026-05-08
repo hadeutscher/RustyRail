@@ -5,8 +5,8 @@
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 mod test_data;
-use chrono::{NaiveDateTime, NaiveTime};
-use harail::{HaDuration, RailroadData, StopSchedule, Train};
+use chrono::{Duration, NaiveDateTime, NaiveTime};
+use harail::{RailroadData, StopSchedule, Train};
 use test_data::test_date;
 
 #[test]
@@ -14,10 +14,10 @@ fn graph_time_cutoff() {
     let trains = vec![Train::from_stops_dates(
         "1",
         vec![
-            StopSchedule::new(100, HaDuration::from_hms(10, 00, 00), None),
-            StopSchedule::new(200, HaDuration::from_hms(10, 30, 00), None),
-            StopSchedule::new(300, HaDuration::from_hms(11, 00, 00), None),
-            StopSchedule::new(400, HaDuration::from_hms(11, 30, 00), None),
+            StopSchedule::new(100, Duration::hours(10), None),
+            StopSchedule::new(200, Duration::hours(10) + Duration::minutes(30), None),
+            StopSchedule::new(300, Duration::hours(11), None),
+            StopSchedule::new(400, Duration::hours(11) + Duration::minutes(30), None),
         ],
         vec![test_date(), test_date().succ_opt().unwrap()],
     )];

@@ -119,7 +119,53 @@ h3.routes-header {
     padding: 8px 11px; /* compensate for extra border px */
 }
 
-/* ── Button ─────────────────────────────────────────────────────────────── */
+/* ── Station row (source + swap button + destination) ────────────────── */
+.station-fields {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 16px;
+    width: 100%;
+}
+.station-fields .form-field {
+    flex: 1;
+    min-width: 0;
+}
+.btn-swap {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    font-size: 1.1rem;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition:
+        background 0.2s,
+        color 0.2s;
+}
+.btn-swap:hover {
+    background: var(--primary);
+    color: #fff;
+}
+@media (max-width: 519px) {
+    .station-fields {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .btn-swap {
+        align-self: center;
+    }
+}
+
+/* ── Button ───────────────────────────────────────────────────────────── */
 .btn-primary {
     background: var(--primary);
     color: #fff;
@@ -163,6 +209,78 @@ h3.routes-header {
 }
 .route-list li:last-child {
     border-bottom: none;
+}
+
+/* ── Clickable route part ───────────────────────────────────────────────── */
+.route-part {
+    cursor: pointer;
+    user-select: none;
+}
+.route-part:hover {
+    background: rgba(63, 81, 181, 0.05);
+}
+.route-part-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.route-part-label {
+    flex: 1;
+    text-align: center;
+}
+.route-part-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+.route-part-train {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+.chevron {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+    display: inline-block;
+}
+.chevron.expanded {
+    transform: rotate(180deg);
+}
+
+/* ── Stops panel ─────────────────────────────────────────────────────────── */
+.stops-panel {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: rgba(63, 81, 181, 0.04);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--primary);
+}
+.stops-list {
+    list-style: none;
+}
+.stop-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 4px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    font-size: 0.85rem;
+}
+.stop-item:last-child {
+    border-bottom: none;
+}
+.stop-item--endpoint {
+    font-weight: 600;
+}
+.stop-name {
+    color: var(--text);
+}
+.stop-time {
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.82rem;
 }
 
 /* ── Status text ─────────────────────────────────────────────────────────── */

@@ -17,7 +17,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 pub use errors::HaError;
-pub use gtfs::{HaDuration, RailroadData, Station, StationId, StopSchedule, Train, TrainId};
+pub use gtfs::{RailroadData, Station, StationId, StopSchedule, Train, TrainId};
 
 /// An object which can be written to JSON.
 ///
@@ -47,8 +47,8 @@ impl JSON for Stop<'_> {
 }
 
 impl<'a> Stop<'a> {
-    fn inflate_stop_time(date: NaiveDate, offset: HaDuration) -> NaiveDateTime {
-        NaiveDateTime::new(date, NaiveTime::from_hms_opt(0, 0, 0).unwrap()) + offset.to_chrono()
+    fn inflate_stop_time(date: NaiveDate, offset: Duration) -> NaiveDateTime {
+        NaiveDateTime::new(date, NaiveTime::from_hms_opt(0, 0, 0).unwrap()) + offset
     }
 
     /// Construct a Stop object from a StopSchedule and a specific date

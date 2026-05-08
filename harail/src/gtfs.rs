@@ -10,8 +10,7 @@ use crate::HaError;
 use crate::JSON;
 use chrono::{Datelike, Duration, NaiveDate};
 use jzon::JsonValue;
-use serde::de::Visitor;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
@@ -108,102 +107,20 @@ impl Station {
     }
 }
 
-/// Represents a duration in seconds. Used instead of chrono::Duration since the latter doesn't support serde.
-#[derive(Copy, Clone)]
-pub struct HaDuration {
-    seconds: u64,
-}
-
-impl HaDuration {
-    /// Create a new HaDuration object from hours, minutes and seconds
-    pub fn from_hms(h: u32, m: u32, s: u32) -> Self {
-        HaDuration {
-            seconds: (h as u64) * 3600 + (m as u64) * 60 + s as u64,
-        }
-    }
-
-    /// Create a new Haduration object from seconds only
-    pub fn from_seconds(s: u64) -> Self {
-        HaDuration { seconds: s }
-    }
-
-    /// Convert to a chrono duration
-    ///
-    /// Examples:
-    /// ```
-    /// use harail::HaDuration;
-    /// use chrono::Duration;
-    ///
-    /// let d = HaDuration::from_hms(10, 30, 40);
-    /// let c = Duration::hours(10) + Duration::minutes(30) + Duration::seconds(40);
-    /// assert_eq!(c, d.to_chrono());
-    /// ```
-    pub fn to_chrono(&self) -> Duration {
-        Duration::seconds(self.seconds as i64)
-    }
-}
-
-impl fmt::Display for HaDuration {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}:{}:{}",
-            self.seconds / 3600,
-            (self.seconds % 3600) / 60,
-            self.seconds % 60
-        )
-    }
-}
-
-impl Serialize for HaDuration {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_u64(self.seconds)
-    }
-}
-
-struct HaDurationVisitor;
-
-impl Visitor<'_> for HaDurationVisitor {
-    type Value = HaDuration;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("an integer between 0 and 2^32")
-    }
-
-    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        Ok(HaDuration::from_seconds(value))
-    }
-}
-
-impl<'de> Deserialize<'de> for HaDuration {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_u64(HaDurationVisitor)
-    }
-}
-
 /// Represents a train's scheduled stopping at a certain station
 #[derive(Serialize, Deserialize)]
 pub struct StopSchedule {
     station: StationId,
-    arrival_offset: HaDuration,
-    departure_offset: HaDuration,
+    arrival_offset: Duration,
+    departure_offset: Duration,
 }
 
 impl StopSchedule {
     /// Create a new Stop object
     pub fn new(
         station: StationId,
-        arrival_offset: HaDuration,
-        departure_offset: Option<HaDuration>,
+        arrival_offset: Duration,
+        departure_offset: Option<Duration>,
     ) -> Self {
         Self {
             station,
@@ -218,14 +135,14 @@ impl StopSchedule {
     }
 
     /// The time the train has arrived at the station, as offset from the start of the schedule
-    pub fn arrival_offset(&self) -> HaDuration {
+    pub fn arrival_offset(&self) -> Duration {
         self.arrival_offset
     }
 
     /// The time the train has departed from the station, as offset from the start of the schedule.
     ///
     /// This is usually the same as arrival offset, unless the train waits at the station.
-    pub fn departure_offset(&self) -> HaDuration {
+    pub fn departure_offset(&self) -> Duration {
         self.departure_offset
     }
 }
@@ -581,7 +498,7 @@ impl RailroadData {
         Ok(map)
     }
 
-    fn parse_gtfs_time(time_str: &str) -> Result<HaDuration, Box<dyn Error>> {
+    fn parse_gtfs_time(time_str: &str) -> Result<Duration, Box<dyn Error>> {
         let (mut h, mut m, mut s): (u32, u32, u32) = (0, 0, 0);
         for (state, part) in time_str.split(':').enumerate() {
             match state {
@@ -595,7 +512,9 @@ impl RailroadData {
                 }
             };
         }
-        Ok(HaDuration::from_hms(h, m, s))
+        Ok(Duration::seconds(
+            h as i64 * 3600 + m as i64 * 60 + s as i64,
+        ))
     }
 
     fn parse_stop_times<R: Read>(

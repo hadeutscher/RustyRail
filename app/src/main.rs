@@ -12,8 +12,10 @@ mod db;
 #[cfg(all(test, feature = "server"))]
 mod tests;
 
+use chrono::{DateTime, FixedOffset};
 use dioxus::prelude::*;
-use types::{RouteDto, RoutePartDto, StationDto};
+use dioxus_sdk::storage::{LocalStorage, use_storage};
+use types::{RouteDto, RoutePartDto, StationDto, TrainStopDto};
 
 // ---------------------------------------------------------------------------
 // Server-only: shared state (global, set once at startup)
@@ -100,6 +102,40 @@ pub fn routes_from_data(
     Ok(dtos)
 }
 
+/// Resolves every stop for the given train identifier, returning them in
+/// schedule order as serialisable DTOs.
+#[cfg(feature = "server")]
+pub fn train_stops_from_data(
+    data: &harail::RailroadData,
+    train_id: &str,
+) -> Result<Vec<TrainStopDto>, String> {
+    let train = data
+        .train(train_id)
+        .ok_or_else(|| format!("Train '{train_id}' not found"))?;
+
+    let stops = train
+        .stops()
+        .map(|stop| {
+            let station_id = stop.station();
+            let station_name = data
+                .station(station_id)
+                .map_or_else(|| "Unknown".to_owned(), |s| s.name().to_owned());
+
+            let arr_secs = stop.arrival_offset().num_seconds() as u64;
+            let dep_secs = stop.departure_offset().num_seconds() as u64;
+
+            TrainStopDto {
+                station_id,
+                station_name,
+                arrival_offset: format!("{:02}:{:02}", arr_secs / 3600, (arr_secs % 3600) / 60),
+                departure_offset: format!("{:02}:{:02}", dep_secs / 3600, (dep_secs % 3600) / 60),
+            }
+        })
+        .collect();
+
+    Ok(stops)
+}
+
 // ---------------------------------------------------------------------------
 // Server functions  (signature visible to WASM; body runs on the server)
 // ---------------------------------------------------------------------------
@@ -135,6 +171,17 @@ pub async fn find_routes(
         .map_err(ServerFnError::new)
 }
 
+/// Returns all scheduled stops for the given train identifier, in order.
+#[server(endpoint = "get_train_stops")]
+pub async fn get_train_stops(train_id: String) -> Result<Vec<TrainStopDto>, ServerFnError> {
+    let guard = RAILROAD_DATA
+        .get()
+        .ok_or_else(|| ServerFnError::new("Database not initialised"))?
+        .read()
+        .await;
+    train_stops_from_data(&guard, &train_id).map_err(ServerFnError::new)
+}
+
 // ---------------------------------------------------------------------------
 // Utility: format an RFC 3339 timestamp as "HH:MM"
 // ---------------------------------------------------------------------------
@@ -154,35 +201,45 @@ fn fmt_hhmm(iso: &str) -> String {
 // Default date / time helpers
 // ---------------------------------------------------------------------------
 
-/// Returns `(date, start_time, end_time)` as HTML-input-compatible strings
-/// (`"YYYY-MM-DD"`, `"HH:MM"`, `"HH:MM"`) using the **browser's** local clock
-/// on WASM and the **server's** local clock for SSR.
-#[cfg(target_arch = "wasm32")]
-fn default_date_time() -> (String, String, String) {
-    let now = js_sys::Date::new_0();
-    let year = now.get_full_year();
-    let month = now.get_month() + 1; // JS months are 0-indexed
-    let day = now.get_date();
-    let hour = now.get_hours();
-    let minute = now.get_minutes();
-    let end_h = (hour + 3) % 24;
-    (
-        format!("{year:04}-{month:02}-{day:02}"),
-        format!("{hour:02}:{minute:02}"),
-        format!("{end_h:02}:{minute:02}"),
-    )
+pub fn local_time() -> DateTime<FixedOffset> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        // Get JS Date (local time)
+        let date = js_sys::Date::new_0();
+
+        // Convert milliseconds → seconds + nanoseconds
+        let millis = date.get_time();
+        let secs = (millis / 1000.0) as i64;
+        let nanos = ((millis % 1000.0) * 1_000_000.0) as u32;
+
+        // Convert to UTC DateTime
+        let utc = DateTime::<chrono::Utc>::from_timestamp(secs, nanos).expect("invalid timestamp");
+
+        // Browser local offset (minutes)
+        let offset_minutes = date.get_timezone_offset() as i32 * -1;
+        let offset = FixedOffset::east_opt(offset_minutes * 60).expect("invalid offset");
+
+        utc.with_timezone(&offset)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        chrono::Local::now().fixed_offset()
+    }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-#[allow(unused)]
 fn default_date_time() -> (String, String, String) {
-    use chrono::Local;
-    let now = Local::now();
+    let now = local_time();
     let end = now + chrono::Duration::hours(3);
+    let end_time = if end.date_naive() > now.date_naive() {
+        "23:59".to_string()
+    } else {
+        end.format("%H:%M").to_string()
+    };
     (
         now.format("%Y-%m-%d").to_string(),
         now.format("%H:%M").to_string(),
-        end.format("%H:%M").to_string(),
+        end_time,
     )
 }
 
@@ -193,7 +250,10 @@ fn default_date_time() -> (String, String, String) {
 /// Root application component.
 #[component]
 fn App() -> Element {
-    let stations_res = use_resource(get_stations);
+    // use_server_future blocks SSR until the future resolves, then serialises
+    // the result into the page so the client hydrates with data already
+    // present — the None (loading) branch is never visible in practice.
+    let stations_res = use_server_future(get_stations)?;
 
     rsx! {
         document::Link { rel: "icon", href: asset!("/assets/favicon.ico") }
@@ -228,8 +288,9 @@ struct RouteFinderProps {
 fn RouteFinder(props: RouteFinderProps) -> Element {
     let stations = props.stations;
 
-    let mut source = use_signal(String::new);
-    let mut destination = use_signal(String::new);
+    let mut source = use_storage::<LocalStorage, String>("harail_source".to_string(), String::new);
+    let mut destination =
+        use_storage::<LocalStorage, String>("harail_destination".to_string(), String::new);
     // Closures are only evaluated once (first mount); the current time at
     // mount becomes the live default which the user can then freely edit.
     let mut date = use_signal(|| default_date_time().0);
@@ -241,6 +302,13 @@ fn RouteFinder(props: RouteFinderProps) -> Element {
 
     // Clone for use in the results section (event handler moves other copies).
     let stations_display = stations.clone();
+
+    let handle_swap = move |_| {
+        let s = source();
+        let d = destination();
+        source.set(d);
+        destination.set(s);
+    };
 
     let handle_search = move |_| {
         let src = source();
@@ -289,22 +357,39 @@ fn RouteFinder(props: RouteFinderProps) -> Element {
         h2 { "Route Finder" }
 
         // ── Row 1: Stations ─────────────────────────────────────────────
-        div { class: "form-fields",
+        div { class: "station-fields",
             div { class: "form-field",
                 label { r#for: "source", "Source station" }
                 select { id: "source", onchange: move |e| source.set(e.value()),
-                    option { value: "", "Select source…" }
+                    option { value: "", "Select source\u{2026}" }
                     for station in &stations {
-                        option { key: "{station.id}", value: "{station.id}", "{station.name}" }
+                        option {
+                            key: "{station.id}",
+                            value: "{station.id}",
+                            selected: station.id.to_string() == source(),
+                            "{station.name}"
+                        }
                     }
                 }
+            }
+            button {
+                class: "btn-swap",
+                r#type: "button",
+                title: "Swap stations",
+                onclick: handle_swap,
+                "\u{21C4}"
             }
             div { class: "form-field",
                 label { r#for: "dest", "Destination station" }
                 select { id: "dest", onchange: move |e| destination.set(e.value()),
-                    option { value: "", "Select destination…" }
+                    option { value: "", "Select destination\u{2026}" }
                     for station in &stations {
-                        option { key: "{station.id}", value: "{station.id}", "{station.name}" }
+                        option {
+                            key: "{station.id}",
+                            value: "{station.id}",
+                            selected: station.id.to_string() == destination(),
+                            "{station.name}"
+                        }
                     }
                 }
             }
@@ -390,6 +475,9 @@ fn RouteCard(route: RouteDto, stations: Vec<StationDto>) -> Element {
 }
 
 /// Renders one leg of a journey.
+///
+/// Clicking the item toggles a stops panel that lazily fetches every
+/// scheduled stop for the train via [`get_train_stops`].
 #[component]
 fn RoutePartItem(part: RoutePartDto, stations: Vec<StationDto>) -> Element {
     let start_name = stations
@@ -402,8 +490,66 @@ fn RoutePartItem(part: RoutePartDto, stations: Vec<StationDto>) -> Element {
         .map_or_else(|| "Unknown".to_owned(), |s| s.name.clone());
     let st = fmt_hhmm(&part.start_time);
     let et = fmt_hhmm(&part.end_time);
+
+    let mut expanded = use_signal(|| false);
+    let mut stops: Signal<Option<Vec<TrainStopDto>>> = use_signal(|| None);
+    let mut loading = use_signal(|| false);
+    let mut fetch_error: Signal<Option<String>> = use_signal(|| None);
+
+    // Capture the train id for use inside the click handler.
+    let train_id = part.train.clone();
+
+    let handle_click = move |_| {
+        let now_expanded = !expanded();
+        expanded.set(now_expanded);
+
+        // Only fetch once, and only when opening the panel.
+        if now_expanded && stops().is_none() && !loading() {
+            let tid = train_id.clone();
+            loading.set(true);
+            fetch_error.set(None);
+            spawn(async move {
+                match get_train_stops(tid).await {
+                    Ok(s) => {
+                        stops.set(Some(s));
+                        loading.set(false);
+                    }
+                    Err(e) => {
+                        fetch_error.set(Some(format!("{e}")));
+                        loading.set(false);
+                    }
+                }
+            });
+        }
+    };
+
     rsx! {
-        li { "{start_name} \u{2190} {end_name}  ({st}\u{2013}{et})" }
+        li { class: "route-part", onclick: handle_click,
+            div { class: "route-part-header",
+                span { class: "route-part-label", "{start_name} \u{2190} {end_name}  ({st}\u{2013}{et})" }
+                span { class: "route-part-meta",
+                    span { class: if expanded() { "chevron expanded" } else { "chevron" }, "\u{25bc}" }
+                }
+            }
+            if expanded() {
+                div { class: "stops-panel",
+                    if loading() {
+                        p { class: "loading-text", "Loading stops\u{2026}" }
+                    } else if let Some(err) = fetch_error() {
+                        p { class: "error-text", "Error: {err}" }
+                    } else if let Some(stop_list) = stops() {
+                        ul { class: "stops-list",
+                            for stop in stop_list {
+                                li { class: if stop.station_id == part.start_station || stop.station_id == part.end_station { "stop-item stop-item--endpoint" } else { "stop-item" },
+                                    span { class: "stop-name", "{stop.station_name}" }
+                                    span { class: "stop-time", "{stop.arrival_offset}" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -446,6 +592,11 @@ async fn main() {
 
 #[cfg(not(feature = "server"))]
 fn main() {
+    // On native targets (desktop / Android / iOS) this sets the directory used
+    // by LocalStorage to <OS data dir>/harail-app.  On WASM the macro is a
+    // no-op because the browser's localStorage is used instead.
+    dioxus_sdk::storage::set_dir!();
+
     dioxus::fullstack::set_server_url(cfg_select! {
         // In a standard Android emulator (AVD / Android Studio) the host machine
         // is reachable at 10.0.2.2. Use port 8080, the Dioxus fullstack default.
