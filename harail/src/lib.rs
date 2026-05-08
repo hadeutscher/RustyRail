@@ -236,17 +236,6 @@ impl<'a> RailroadGraph<'a> {
                     .unwrap()
                     .connect(Action::Wait(next.time - s.time), next);
             }
-            if let Some(prev) = self
-                .nodes()
-                .map(|n| n.id())
-                .filter(|n| n.train == s.train && n.station == s.station && n.time < s.time)
-                .max_by_key(|n| n.time)
-                .copied()
-            {
-                self.get_mut(&prev)
-                    .unwrap()
-                    .connect(Action::Wait(s.time - prev.time), s);
-            }
         }
     }
 }
