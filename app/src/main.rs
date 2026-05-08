@@ -121,8 +121,8 @@ pub fn train_stops_from_data(
                 .station(station_id)
                 .map_or_else(|| "Unknown".to_owned(), |s| s.name().to_owned());
 
-            let arr_secs = stop.arrival_offset().to_chrono().num_seconds() as u64;
-            let dep_secs = stop.departure_offset().to_chrono().num_seconds() as u64;
+            let arr_secs = stop.arrival_offset().num_seconds() as u64;
+            let dep_secs = stop.departure_offset().num_seconds() as u64;
 
             TrainStopDto {
                 station_id,
