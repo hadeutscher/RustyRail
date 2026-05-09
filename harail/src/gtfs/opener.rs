@@ -7,10 +7,12 @@
 use std::{error::Error, fs::File, io::prelude::*, path::Path};
 use zip::{ZipArchive, read::ZipFile};
 
-pub trait FileOpener<'a> {
-    type Read: Read;
+pub trait FileOpener {
+    type Read<'a>: Read
+    where
+        Self: 'a;
 
-    fn open(&'a mut self, name: &str) -> Result<Self::Read, Box<dyn Error>>;
+    fn open(&mut self, name: &str) -> Result<Self::Read<'_>, Box<dyn Error>>;
 }
 
 pub struct PathFileOpener<'p> {
@@ -23,10 +25,13 @@ impl<'p> PathFileOpener<'p> {
     }
 }
 
-impl<'a> FileOpener<'a> for PathFileOpener<'_> {
-    type Read = File;
+impl FileOpener for PathFileOpener<'_> {
+    type Read<'a>
+        = File
+    where
+        Self: 'a;
 
-    fn open(&'a mut self, name: &str) -> Result<Self::Read, Box<dyn Error>> {
+    fn open(&mut self, name: &str) -> Result<Self::Read<'_>, Box<dyn Error>> {
         Ok(File::open(self.path.join(name))?)
     }
 }
@@ -41,10 +46,13 @@ impl<R: Read + Seek> ZipFileOpener<R> {
     }
 }
 
-impl<'a, R: Read + Seek + 'a> FileOpener<'a> for ZipFileOpener<R> {
-    type Read = ZipFile<'a, R>;
+impl<R: Read + Seek> FileOpener for ZipFileOpener<R> {
+    type Read<'a>
+        = ZipFile<'a, R>
+    where
+        R: 'a;
 
-    fn open(&'a mut self, name: &str) -> Result<Self::Read, Box<dyn Error>> {
+    fn open(&mut self, name: &str) -> Result<Self::Read<'_>, Box<dyn Error>> {
         Ok(self.zip.by_name(name)?)
     }
 }

@@ -6,7 +6,7 @@
 
 mod opener;
 
-use crate::{HaError, JSON};
+use crate::{HaError, JSON, gtfs::opener::FileOpener};
 use chrono::{Datelike, Duration, NaiveDate};
 use jzon::JsonValue;
 use serde::{Deserialize, Serialize};
@@ -616,7 +616,7 @@ impl RailroadData {
         Ok(stations)
     }
 
-    fn load_gtfs<T: for<'a> opener::FileOpener<'a>>(mut opener: T) -> Result<Self, Box<dyn Error>> {
+    fn load_gtfs(mut opener: impl FileOpener) -> Result<Self, Box<dyn Error>> {
         let irw_id = Self::parse_agency(opener.open("agency.txt")?)?;
         let irw_routes = Self::parse_routes(opener.open("routes.txt")?, irw_id)?;
         let services = Self::parse_calendar(opener.open("calendar.txt")?)?;
