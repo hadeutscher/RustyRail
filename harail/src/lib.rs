@@ -15,6 +15,7 @@ use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use jzon::JsonValue;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::ops::Deref;
 
 pub use errors::HaError;
 pub use gtfs::{RailroadData, Station, StationId, StopSchedule, Train, TrainId};
@@ -222,9 +223,9 @@ impl<'a> RailroadGraph<'a> {
         result
     }
 
-    fn ensure(&mut self, s: Singularity<'a>) {
-        if self.get(&s).is_none() {
-            self.get_or_insert(&s);
+    fn ensure(&mut self, s: &Singularity<'a>) -> OriginGuard<'_, 'a> {
+        let inserted_key = self.get(s).is_none().then(|| {
+            self.get_or_insert(s);
             if let Some(next) = self
                 .nodes()
                 .map(|n| n.id())
@@ -232,10 +233,41 @@ impl<'a> RailroadGraph<'a> {
                 .min_by_key(|n| n.time)
                 .copied()
             {
-                self.get_mut(&s)
+                self.get_mut(s)
                     .unwrap()
                     .connect(Action::Wait(next.time - s.time), next);
             }
+            *s
+        });
+        OriginGuard {
+            graph: self,
+            inserted_key,
+        }
+    }
+}
+
+/// RAII guard returned by [`RailroadGraph::ensure`].
+///
+/// While alive it provides read-only access to the graph via `Deref`.
+/// On drop it removes the temporarily-inserted origin node (if any).
+struct OriginGuard<'g, 'a> {
+    graph: &'g mut RailroadGraph<'a>,
+    /// `Some` only when `ensure` actually inserted the node; prevents
+    /// removing a node that was already present before the call.
+    inserted_key: Option<Singularity<'a>>,
+}
+
+impl<'g, 'a> Deref for OriginGuard<'g, 'a> {
+    type Target = RailroadGraph<'a>;
+    fn deref(&self) -> &RailroadGraph<'a> {
+        self.graph
+    }
+}
+
+impl<'g, 'a> Drop for OriginGuard<'g, 'a> {
+    fn drop(&mut self) {
+        if let Some(key) = self.inserted_key {
+            self.graph.remove(&key);
         }
     }
 }
@@ -395,8 +427,9 @@ pub fn get_best_single_route<'a>(
         time: start_time,
         train: None,
     };
-    g.ensure(origin);
-    let path = g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none())?;
+    let path = g
+        .ensure(&origin)
+        .find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none())?;
     Some(build_route(path))
 }
 
@@ -419,8 +452,9 @@ pub fn get_latest_good_single_route<'a>(
         time: start_time,
         train: None,
     };
-    g.ensure(origin);
-    let path = g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none())?;
+    let path = g
+        .ensure(&origin)
+        .find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none())?;
     let mut route = build_route(path);
     let best_arrival = match route.parts().last() {
         Some(x) => x.end.arrival(),
@@ -432,9 +466,9 @@ pub fn get_latest_good_single_route<'a>(
             time: route.parts().next().unwrap().start.departure() + Duration::seconds(1),
             train: None,
         };
-        g.ensure(origin);
-        let path_opt =
-            g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none());
+        let path_opt = g
+            .ensure(&origin)
+            .find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none());
         route = match path_opt {
             Some(p) => build_route(p),
             None => break,
@@ -462,9 +496,9 @@ pub fn get_multiple_routes<'a>(
         time: start_time,
         train: None,
     };
-    g.ensure(origin);
-    let mut path_opt =
-        g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none());
+    let mut path_opt = g
+        .ensure(&origin)
+        .find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none());
     while let Some(path) = path_opt {
         let route = build_route(path);
         if route.parts.is_empty() {
@@ -477,8 +511,9 @@ pub fn get_multiple_routes<'a>(
             train: None,
         };
         result.push(route);
-        g.ensure(origin);
-        path_opt = g.find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none());
+        path_opt = g
+            .ensure(&origin)
+            .find_shortest_path(&origin, |s| s.station == end_station && s.train.is_none());
     }
     result
 }

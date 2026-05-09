@@ -66,6 +66,10 @@ impl<N: Eq + Hash + Copy, E: Eq + Hash + Copy + Weight> Graph<N, E> {
         self.nodes.entry(*id).or_insert_with(|| Node::new(*id))
     }
 
+    pub fn remove(&mut self, id: &N) {
+        self.nodes.remove(id);
+    }
+
     pub fn nodes(&self) -> impl Iterator<Item = &Node<N, E>> {
         self.nodes.values()
     }
