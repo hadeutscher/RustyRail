@@ -6,13 +6,13 @@
 
 mod test_data;
 use chrono::{Duration, NaiveDateTime, NaiveTime};
-use harail::RoutePart;
-use harail::{RailroadData, StopSchedule, Train};
+use harail::{RailroadData, RoutePart, StopSchedule, Train};
 use test_data::test_date;
 
 #[test]
 fn shortest_path() {
-    // Basic shortest-path test, expected result is to ride train 2 from 100 to 400 and then go back to 300 using train 3
+    // Basic shortest-path test, expected result is to ride train 2 from 100 to 400
+    // and then go back to 300 using train 3
     let trains = vec![
         Train::from_stops_date(
             "1",
@@ -79,8 +79,9 @@ fn shortest_path() {
 
 #[test]
 fn minimize_switches() {
-    // Tests basic train switch cost logic. Expected result is to ride train 1 all the way to station 600,
-    // even though some of the route appears to be faster if we switch train.
+    // Tests basic train switch cost logic. Expected result is to ride train 1 all
+    // the way to station 600, even though some of the route appears to be
+    // faster if we switch train.
     let trains = vec![
         Train::from_stops_date(
             "1",
@@ -143,7 +144,8 @@ fn minimize_switches() {
 
 #[test]
 fn minimize_switches2() {
-    // Test train switch minimization in a more complicated case. Expected result is to only use train 1.
+    // Test train switch minimization in a more complicated case. Expected result is
+    // to only use train 1.
     let trains = vec![
         Train::from_stops_date(
             "1",
@@ -197,7 +199,8 @@ fn minimize_switches2() {
 #[test]
 fn wait_on_train() {
     // Test trains with WAIT_ON_TRAIN
-    // expected result is to use train 1 only in train switching mode, train 2 then 1 in delayed leaving
+    // expected result is to use train 1 only in train switching mode, train 2 then
+    // 1 in delayed leaving
     let trains = vec![
         Train::from_stops_date(
             "1",

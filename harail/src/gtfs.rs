@@ -6,21 +6,21 @@
 
 mod opener;
 
-use crate::HaError;
-use crate::JSON;
+use crate::{HaError, JSON};
 use chrono::{Datelike, Duration, NaiveDate};
 use jzon::JsonValue;
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
-use std::error::Error;
-use std::fmt;
-use std::fs::File;
-use std::hash::{Hash, Hasher};
-use std::io::BufReader;
-use std::io::prelude::*;
-use std::path::Path;
-use std::result::Result;
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    error::Error,
+    fmt,
+    fs::File,
+    hash::{Hash, Hasher},
+    io::{BufReader, prelude::*},
+    path::Path,
+    result::Result,
+};
 use zip::ZipArchive;
 
 /// A unique identifier type for trains in the database
@@ -134,14 +134,17 @@ impl StopSchedule {
         self.station
     }
 
-    /// The time the train has arrived at the station, as offset from the start of the schedule
+    /// The time the train has arrived at the station, as offset from the start
+    /// of the schedule
     pub fn arrival_offset(&self) -> Duration {
         self.arrival_offset
     }
 
-    /// The time the train has departed from the station, as offset from the start of the schedule.
+    /// The time the train has departed from the station, as offset from the
+    /// start of the schedule.
     ///
-    /// This is usually the same as arrival offset, unless the train waits at the station.
+    /// This is usually the same as arrival offset, unless the train waits at
+    /// the station.
     pub fn departure_offset(&self) -> Duration {
         self.departure_offset
     }
@@ -155,9 +158,13 @@ struct PrototypeTrain {
 
 /// Represents a single train's schedule
 ///
-/// Note that this objects represents not the train but rather the act of the train moving from its initial station to its end station, possibly passing through other stations, repeatedly over a number of days.
-/// For example, one physical train might be responsible for handling a line repetitively, traveling forward and backwards over it many times a day.
-/// Each such pass over this route from start to end (or vice versa) is represented by a Train object.
+/// Note that this objects represents not the train but rather the act of the
+/// train moving from its initial station to its end station, possibly passing
+/// through other stations, repeatedly over a number of days. For example, one
+/// physical train might be responsible for handling a line repetitively,
+/// traveling forward and backwards over it many times a day. Each such pass
+/// over this route from start to end (or vice versa) is represented by a Train
+/// object.
 #[derive(Serialize, Deserialize)]
 pub struct Train {
     id: TrainId,
@@ -565,9 +572,12 @@ impl RailroadData {
             let stop_seq_index = stop_sequence as usize - 1;
             let stop = StopSchedule::new(stop_id, arrival_datetime, Some(departure_datetime));
             if !proto_trains.contains_key(trip_id) {
-                // We take ownership of the dates vector from inside the trips table by replacing it with None.
-                // This should never panic because insert will never return None since we validated trips.contains_key(trip_id) before,
-                // and the optional vec is always set to Some by parse_trips, and only replaced once by us (we validate !proto_trains.contains_key(trip_id) here)
+                // We take ownership of the dates vector from inside the trips table by
+                // replacing it with None. This should never panic because
+                // insert will never return None since we validated trips.contains_key(trip_id)
+                // before, and the optional vec is always set to Some by
+                // parse_trips, and only replaced once by us (we validate
+                // !proto_trains.contains_key(trip_id) here)
                 let dates = trips.insert(trip_id.to_owned(), None).unwrap().unwrap();
                 proto_trains.insert(
                     trip_id.to_owned(),

@@ -39,7 +39,8 @@ pub struct RouteDto {
     pub parts: Vec<RoutePartDto>,
 }
 
-/// One stop along a train's full schedule (station + scheduled times as offsets from midnight).
+/// One stop along a train's full schedule (station + scheduled times as offsets
+/// from midnight).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TrainStopDto {
     /// Station identifier.

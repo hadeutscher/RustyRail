@@ -13,16 +13,20 @@ extern crate jzon;
 
 use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use jzon::JsonValue;
-use std::collections::{HashMap, HashSet};
-use std::fmt;
-use std::ops::Deref;
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+    ops::Deref,
+};
 
 pub use errors::HaError;
 pub use gtfs::{RailroadData, Station, StationId, StopSchedule, Train, TrainId};
 
 /// An object which can be written to JSON.
 ///
-/// This is different than the Serialize trait, since it doesn't guarantee that the writing function is one to one. It is more like the Display trait, just with JSON instead of human readable strings.
+/// This is different than the Serialize trait, since it doesn't guarantee that
+/// the writing function is one to one. It is more like the Display trait, just
+/// with JSON instead of human readable strings.
 pub trait JSON {
     fn to_json(&self) -> JsonValue;
 }
@@ -99,7 +103,8 @@ impl graph::Weight for Action<'_> {
         match self {
             Action::Wait(time) => time.num_seconds(),
             Action::TrainWaits(_, stop) => (stop.departure() - stop.arrival()).num_seconds(),
-            // This minimizes train movements, to prevent e.g. going a->b->c->d->c->b instead of a->b->c->b, if they have the same dest time
+            // This minimizes train movements, to prevent e.g. going a->b->c->d->c->b instead of
+            // a->b->c->b, if they have the same dest time
             Action::Ride(_, start, end) => (end.arrival() - start.departure()).num_seconds() + 1,
             // This minimizes train switches
             Action::Board(_) => 60,
@@ -126,7 +131,8 @@ impl<'a> RailroadGraph<'a> {
         };
         // Iterate all trains on all dates
         for train in data.trains() {
-            // This is a preliminary filter, using dates only - we will do a fine-tuned filtering that includes time soon
+            // This is a preliminary filter, using dates only - we will do a fine-tuned
+            // filtering that includes time soon
             for date in train
                 .dates()
                 .filter(|&x| x >= &first_possible_date && x <= &last_possible_date)
@@ -144,7 +150,8 @@ impl<'a> RailroadGraph<'a> {
                     }
                     let station_set = stations_general.get_mut(stop.station).unwrap();
 
-                    // Create nodes for train arrival time and station time, and connect unboarding option
+                    // Create nodes for train arrival time and station time, and connect unboarding
+                    // option
                     let arrival = Singularity {
                         station: stop.station,
                         time: stop.arrival,
@@ -170,7 +177,8 @@ impl<'a> RailroadGraph<'a> {
                     }
 
                     // Handle waiting on train
-                    // Create nodes for train departure time and station time if train arrival != departure
+                    // Create nodes for train departure time and station time if train arrival !=
+                    // departure
                     let (departure, departure_station) = if stop.arrival == stop.departure {
                         (arrival, arrival_station)
                     } else {
@@ -344,7 +352,8 @@ impl<'a> Route<'a> {
         Route { parts }
     }
 
-    /// Iterate over the parts of the route. Each RoutePart corresponds to a single train ride.
+    /// Iterate over the parts of the route. Each RoutePart corresponds to a
+    /// single train ride.
     pub fn parts(&self) -> impl Iterator<Item = &RoutePart<'_>> {
         self.parts.iter()
     }
@@ -409,11 +418,14 @@ fn build_route<'a>(path: Vec<(Action<'a>, Singularity)>) -> Route<'a> {
     route
 }
 
-/// Finds the single best route from the source to the destination station at the given time.
+/// Finds the single best route from the source to the destination station at
+/// the given time.
 ///
-/// This obtains the route with the fastest arrival time, relative to the given time.
-/// If more than one route is present, routes are prioritized according to least train switches, and least stations passed through in general.
-/// The supplied end time is the latest possible arrival time that will be considered. This is used for optimization purposes.
+/// This obtains the route with the fastest arrival time, relative to the given
+/// time. If more than one route is present, routes are prioritized according to
+/// least train switches, and least stations passed through in general.
+/// The supplied end time is the latest possible arrival time that will be
+/// considered. This is used for optimization purposes.
 pub fn get_best_single_route<'a>(
     data: &'a RailroadData,
     start_time: NaiveDateTime,
@@ -433,12 +445,15 @@ pub fn get_best_single_route<'a>(
     Some(build_route(path))
 }
 
-/// Finds a route that arrives no later than the best route, but leaves as late as possible.
+/// Finds a route that arrives no later than the best route, but leaves as late
+/// as possible.
 ///
-/// This obtains the route with the fastest arrival time, relative to the given time.
-/// If more than one route is present, routes are prioritized according to latest departure time.
-/// If still more than one route is present, routes are subsequently prioritized by least train switches, and least stations passed through in general.
-/// The supplied end time is the latest possible arrival time that will be considered. This is used for optimization purposes.
+/// This obtains the route with the fastest arrival time, relative to the given
+/// time. If more than one route is present, routes are prioritized according to
+/// latest departure time. If still more than one route is present, routes are
+/// subsequently prioritized by least train switches, and least stations passed
+/// through in general. The supplied end time is the latest possible arrival
+/// time that will be considered. This is used for optimization purposes.
 pub fn get_latest_good_single_route<'a>(
     data: &'a RailroadData,
     start_time: NaiveDateTime,
@@ -479,8 +494,9 @@ pub fn get_latest_good_single_route<'a>(
 
 /// Finds all good routes to the destination
 ///
-/// This obtains all routes that have no better routes for the same arrival time.
-/// The route search is started from start_time, and will not find routes ending later than end_time.
+/// This obtains all routes that have no better routes for the same arrival
+/// time. The route search is started from start_time, and will not find routes
+/// ending later than end_time.
 pub fn get_multiple_routes<'a>(
     data: &'a RailroadData,
     start_time: NaiveDateTime,

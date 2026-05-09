@@ -4,10 +4,7 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use std::error::Error;
-use std::fs::File;
-use std::io::prelude::*;
-use std::path::Path;
+use std::{error::Error, fs::File, io::prelude::*, path::Path};
 use zip::{ZipArchive, read::ZipFile};
 
 pub trait FileOpener<'a> {

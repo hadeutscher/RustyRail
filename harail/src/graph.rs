@@ -5,8 +5,7 @@
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use priority_queue::PriorityQueue;
-use std::collections::HashMap;
-use std::hash::Hash;
+use std::{collections::HashMap, hash::Hash};
 
 pub trait Weight {
     fn weight(&self) -> i64;

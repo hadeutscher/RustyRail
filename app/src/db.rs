@@ -10,11 +10,12 @@
 use chrono::Local;
 use futures_util::StreamExt;
 use harail::RailroadData;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tokio::time::Duration;
+use std::{
+    io::Write,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+use tokio::{sync::RwLock, time::Duration};
 
 // ---------------------------------------------------------------------------
 // Public types

@@ -34,7 +34,8 @@ fn graph_building(c: &mut Criterion) {
         NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
     );
 
-    // Use same value for start and end station to minimize the cost of Dijkstra's algorithm
+    // Use same value for start and end station to minimize the cost of Dijkstra's
+    // algorithm
     let station = data.stations().next().unwrap();
 
     c.bench_function("1 day graph building", |b| {

@@ -8,10 +8,12 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use clap::{Arg, Command};
 use harail::{HaError, JSON, RailroadData};
 use jzon::JsonValue;
-use std::error::Error;
-use std::fs::File;
-use std::io::{BufReader, BufWriter, Read};
-use std::path::Path;
+use std::{
+    error::Error,
+    fs::File,
+    io::{BufReader, BufWriter, Read},
+    path::Path,
+};
 
 const JSON_SPACES: u16 = 4;
 const VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
