@@ -1432,8 +1432,7 @@ dependencies = [
 [[package]]
 name = "dioxus-sdk"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79a653986dc3151f00a2be4cf04f83ec6c2af24b600ab926d5fcbcd159c6dadf"
+source = "git+https://github.com/DioxusLabs/sdk/#15525043cadc3c467afb15888ce804bdc9b6a46e"
 dependencies = [
  "dioxus-sdk-storage",
 ]
@@ -1441,8 +1440,7 @@ dependencies = [
 [[package]]
 name = "dioxus-sdk-storage"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b16fc5898a5930ae2d787f2db9dedae69581133ba08cfb2cf602b5d35b3af8b"
+source = "git+https://github.com/DioxusLabs/sdk/#15525043cadc3c467afb15888ce804bdc9b6a46e"
 dependencies = [
  "cfg-if",
  "ciborium",
@@ -1450,6 +1448,8 @@ dependencies = [
  "dioxus-signals",
  "directories",
  "futures-util",
+ "jni",
+ "ndk-context",
  "once_cell",
  "rustc-hash 1.1.0",
  "serde",
