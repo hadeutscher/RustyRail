@@ -7,7 +7,7 @@
 //! Database management: downloading, caching, parsing, and periodically
 //! refreshing the GTFS feed from the Israel Ministry of Transport.
 
-use chrono::Local;
+use chrono::{Local, NaiveTime, TimeZone};
 use futures_util::StreamExt;
 use harail::RailroadData;
 use std::{
@@ -33,8 +33,8 @@ pub const CACHE_FILE_NAME: &str = "harail.db";
 
 const GTFS_URL: &str = "https://gtfs.mot.gov.il/gtfsfiles/israel-public-transportation.zip";
 
-/// How often the background task wakes to fetch a new database (~30 days).
-const REFRESH_INTERVAL: Duration = Duration::from_secs(7 * 24 * 60 * 60);
+/// Maximum age of a postcard-serialized database cache before it is considered stale.
+const MAX_CACHE_AGE: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 
 // ---------------------------------------------------------------------------
 // Public helpers used by main
@@ -47,25 +47,18 @@ pub fn default_cache_dir() -> PathBuf {
         .join("harail")
 }
 
-/// On startup: loads the postcard-serialized cache if `end_date()` is today or
-/// later, otherwise downloads, parses and re-caches a fresh GTFS feed.
+/// On startup: loads the postcard-serialized cache if it is less than one week
+/// old, otherwise downloads, parses and re-caches a fresh GTFS feed.
 pub async fn load_or_download(
     cache_path: &Path,
 ) -> Result<RailroadData, Box<dyn std::error::Error + Send + Sync>> {
     match load_from_cache(cache_path).await {
-        Ok(data) if is_data_fresh(&data) => {
-            // unwrap is safe: is_data_fresh only returns true when end_date is Some
-            println!(
-                "Cache is still valid (end date: {}) — skipping download.",
-                data.end_date().unwrap()
-            );
+        Ok(data) if is_cache_fresh(cache_path) => {
+            println!("Cache is still valid (less than one week old) — skipping download.");
             return Ok(data);
         }
-        Ok(data) => {
-            let end = data
-                .end_date()
-                .map_or_else(|| "none".to_string(), |d| d.to_string());
-            println!("Cache is stale (end date: {end}) — downloading fresh data…");
+        Ok(_) => {
+            println!("Cache is stale (older than one week) — downloading fresh data…");
         }
         Err(e) => {
             println!("No usable cache ({e}) — downloading fresh data…");
@@ -74,15 +67,21 @@ pub async fn load_or_download(
     download_parse_and_cache(cache_path).await
 }
 
-/// Background task that wakes every 30 days, downloads a fresh GTFS feed,
-/// caches the parsed database, and atomically swaps the in-memory database.
+/// Background task that wakes every night at 02:00 local time, downloads a
+/// fresh GTFS feed, caches the parsed database, and atomically swaps the
+/// in-memory database.
 ///
 /// On failure the existing database is kept and an error is printed; the
-/// task continues running and will retry at the next interval.
+/// task continues running and will retry at the next 02:00.
 pub async fn refresh_task(shared: SharedData, cache_path: PathBuf) {
     loop {
-        tokio::time::sleep(REFRESH_INTERVAL).await;
-        println!("Starting scheduled monthly GTFS refresh…");
+        let sleep_duration = duration_until_next_2am();
+        println!(
+            "Next GTFS refresh scheduled in {:.1} hours (at 02:00 local time).",
+            sleep_duration.as_secs_f64() / 3600.0
+        );
+        tokio::time::sleep(sleep_duration).await;
+        println!("Starting scheduled nightly GTFS refresh…");
         match download_parse_and_cache(&cache_path).await {
             Ok(new_data) => {
                 *shared.write().await = new_data;
@@ -99,11 +98,41 @@ pub async fn refresh_task(shared: SharedData, cache_path: PathBuf) {
 // Private implementation
 // ---------------------------------------------------------------------------
 
-/// Returns `true` when the database's end date is today or in the future.
-fn is_data_fresh(data: &RailroadData) -> bool {
-    data.end_date()
-        .map(|end| end >= (Local::now() + REFRESH_INTERVAL).date_naive())
+/// Returns `true` when the cache file exists and was written less than
+/// [`MAX_CACHE_AGE`] ago.
+fn is_cache_fresh(cache_path: &Path) -> bool {
+    std::fs::metadata(cache_path)
+        .and_then(|m| m.modified())
+        .map(|modified| {
+            // elapsed() only fails when mtime is in the future; treat that as fresh.
+            modified.elapsed().unwrap_or(Duration::ZERO) < MAX_CACHE_AGE
+        })
         .unwrap_or(false)
+}
+
+/// Returns the [`Duration`] from now until 02:00 local time tonight, or until
+/// 02:00 tomorrow if that time has already passed today.
+fn duration_until_next_2am() -> Duration {
+    let now = Local::now();
+    let target = NaiveTime::from_hms_opt(2, 0, 0).unwrap();
+
+    let today_2am = Local
+        .from_local_datetime(&now.date_naive().and_time(target))
+        .earliest()
+        .unwrap();
+
+    let next_2am = if now < today_2am {
+        today_2am
+    } else {
+        // 02:00 has already passed today — schedule for tomorrow.
+        Local
+            .from_local_datetime(&(now.date_naive() + chrono::Duration::days(1)).and_time(target))
+            .earliest()
+            .unwrap()
+    };
+
+    let secs = (next_2am - now).num_seconds().max(0) as u64;
+    Duration::from_secs(secs)
 }
 
 /// Loads and deserializes the postcard-serialized database from disk.
