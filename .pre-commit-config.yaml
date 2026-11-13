@@ -9,21 +9,22 @@ repos:
     rev: v1.0
     hooks:
       - id: fmt
+        entry: cargo +nightly-2026-11-12 fmt
         pass_filenames: false
       - id: cargo-check
         args: ["--features", "server"]
         pass_filenames: false
       - id: clippy
-        args: ["--features", "server"]
+        args: ["--workspace", "--all-targets", "--features", "server", "--locked", "--", "-D", "warnings"]
         pass_filenames: false
   - repo: https://github.com/DevinR528/cargo-sort
-    rev: v2.1.3
+    rev: v2.1.4
     hooks:
       - id: cargo-sort
         args: ["--workspace"]
         pass_filenames: false
   - repo: https://github.com/EmbarkStudios/cargo-deny
-    rev: 0.19.4
+    rev: 0.20.2
     hooks:
       - id: cargo-deny
         args: ["check", "all"]

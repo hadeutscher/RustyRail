@@ -1,5 +1,7 @@
 # ── Stage 1: dependency cache (cargo-chef) ─────────────────────────────────
-FROM lukemathwalker/cargo-chef:0.1.77-rust-1.95-trixie AS chef
+FROM rust:1.100-trixie AS chef
+RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/v1.27.0/install-from-binstall-release.sh | BINSTALL_VERSION=1.27.0 bash
+RUN cargo binstall --no-confirm --version 0.1.78 cargo-chef
 WORKDIR /app
 
 # ── Stage 2: generate recipe ────────────────────────────────────────────────
@@ -11,19 +13,18 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder
 
 # Install dioxus-cli (dx)
-RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-RUN cargo binstall dioxus-cli
+RUN cargo binstall --no-confirm --version 0.7.10 dioxus-cli
 
 # Pre-build (cache) the server dependencies
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --features server --recipe-path recipe.json
+RUN cargo chef cook --locked --release --features server --recipe-path recipe.json
 
 # Copy source
 COPY . .
 
 # Build the Dioxus app
 WORKDIR /app
-RUN dx bundle --package harail-app --release --debug-symbols=false
+RUN dx bundle --locked --package harail-app --release --debug-symbols=false
 
 # ── Stage 4: minimal runtime image ──────────────────────────────────────────
 FROM debian:trixie-slim

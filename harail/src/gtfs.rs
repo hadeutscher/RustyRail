@@ -572,12 +572,12 @@ impl RailroadData {
             let stop_seq_index = stop_sequence as usize - 1;
             let stop = StopSchedule::new(stop_id, arrival_datetime, Some(departure_datetime));
             if !proto_trains.contains_key(trip_id) {
-                // We take ownership of the dates vector from inside the trips table by
-                // replacing it with None. This should never panic because
-                // insert will never return None since we validated trips.contains_key(trip_id)
-                // before, and the optional vec is always set to Some by
-                // parse_trips, and only replaced once by us (we validate
-                // !proto_trains.contains_key(trip_id) here)
+                // We take ownership of the dates vector from inside the trips
+                // table by replacing it with None. This should never panic
+                // because insert will never return None since we validated
+                // trips.contains_key(trip_id) before, and the optional vec is
+                // always set to Some by parse_trips, and only replaced once by
+                // us (we validate !proto_trains.contains_key(trip_id) here)
                 let dates = trips.insert(trip_id.to_owned(), None).unwrap().unwrap();
                 proto_trains.insert(
                     trip_id.to_owned(),

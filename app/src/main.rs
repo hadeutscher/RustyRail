@@ -598,10 +598,11 @@ fn main() {
     dioxus_sdk::storage::set_dir!();
 
     dioxus::fullstack::set_server_url(cfg_select! {
-        // In a standard Android emulator (AVD / Android Studio) the host machine
-        // is reachable at 10.0.2.2. Use port 8080, the Dioxus fullstack default.
+        // In a standard Android emulator (AVD / Android Studio) the host
+        // machine is reachable at 10.0.2.2. Use port 8080, the Dioxus fullstack
+        // default.
         feature = "android-dev" => "http://10.0.2.2:8080",
-        _  => "https://harail.deut.sh",
+        _ => "https://harail.deut.sh",
     });
 
     dioxus::launch(App);

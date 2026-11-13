@@ -103,8 +103,9 @@ impl graph::Weight for Action<'_> {
         match self {
             Action::Wait(time) => time.num_seconds(),
             Action::TrainWaits(_, stop) => (stop.departure() - stop.arrival()).num_seconds(),
-            // This minimizes train movements, to prevent e.g. going a->b->c->d->c->b instead of
-            // a->b->c->b, if they have the same dest time
+            // This minimizes train movements, to prevent e.g. going
+            // a->b->c->d->c->b instead of a->b->c->b, if they have the same
+            // dest time
             Action::Ride(_, start, end) => (end.arrival() - start.departure()).num_seconds() + 1,
             // This minimizes train switches
             Action::Board(_) => 60,
@@ -131,8 +132,8 @@ impl<'a> RailroadGraph<'a> {
         };
         // Iterate all trains on all dates
         for train in data.trains() {
-            // This is a preliminary filter, using dates only - we will do a fine-tuned
-            // filtering that includes time soon
+            // This is a preliminary filter, using dates only - we will do a
+            // fine-tuned filtering that includes time soon
             for date in train
                 .dates()
                 .filter(|&x| x >= &first_possible_date && x <= &last_possible_date)
@@ -150,8 +151,8 @@ impl<'a> RailroadGraph<'a> {
                     }
                     let station_set = stations_general.get_mut(stop.station).unwrap();
 
-                    // Create nodes for train arrival time and station time, and connect unboarding
-                    // option
+                    // Create nodes for train arrival time and station time, and
+                    // connect unboarding option
                     let arrival = Singularity {
                         station: stop.station,
                         time: stop.arrival,
@@ -177,8 +178,8 @@ impl<'a> RailroadGraph<'a> {
                     }
 
                     // Handle waiting on train
-                    // Create nodes for train departure time and station time if train arrival !=
-                    // departure
+                    // Create nodes for train departure time and station time if
+                    // train arrival != departure
                     let (departure, departure_station) = if stop.arrival == stop.departure {
                         (arrival, arrival_station)
                     } else {
@@ -195,7 +196,8 @@ impl<'a> RailroadGraph<'a> {
                         result.get_or_insert(&departure);
                         station_set.insert(departure_station);
 
-                        // Connect waiting on train edge (train waits in station)
+                        // Connect waiting on train edge (train waits in
+                        // station)
                         result
                             .get_mut(&arrival)
                             .unwrap()

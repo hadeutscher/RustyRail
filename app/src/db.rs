@@ -33,7 +33,8 @@ pub const CACHE_FILE_NAME: &str = "harail.db";
 
 const GTFS_URL: &str = "https://gtfs.mot.gov.il/gtfsfiles/israel-public-transportation.zip";
 
-/// Maximum age of a postcard-serialized database cache before it is considered stale.
+/// Maximum age of a postcard-serialized database cache before it is considered
+/// stale.
 const MAX_CACHE_AGE: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 
 // ---------------------------------------------------------------------------
@@ -104,7 +105,8 @@ fn is_cache_fresh(cache_path: &Path) -> bool {
     std::fs::metadata(cache_path)
         .and_then(|m| m.modified())
         .map(|modified| {
-            // elapsed() only fails when mtime is in the future; treat that as fresh.
+            // elapsed() only fails when mtime is in the future; treat that as
+            // fresh.
             modified.elapsed().unwrap_or(Duration::ZERO) < MAX_CACHE_AGE
         })
         .unwrap_or(false)
